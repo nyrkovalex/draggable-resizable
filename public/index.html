@@ -24,7 +24,7 @@
   <script>
     const target = document.getElementById('target');
     const container = document.getElementById('container');
-    dr.draggable(target, {
+    new dr.Draggable(target, {
       container,
       onDrag: () => {
         document.body.style.cursor = 'move';

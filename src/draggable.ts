@@ -10,23 +10,61 @@ export interface Point {
 
 const px = (value: number) => value + 'px';
 
-function createGhost(params: GhostParams): Ghost {
-  const ghost = params.proto.cloneNode() as HTMLElement;
-  ghost.removeAttribute('id');
-  ghost.style.position = 'absolute';
-  ghost.style.boxSizing = 'border-box';
+export class Draggable {
+  private readonly params: Draggable.Params;
+  private readonly ghost: HTMLElement;
+  private readonly proto: HTMLElement;
+  private readonly ghostWrapper: HTMLElement;
+  private dragPoint: Point | null = null;
 
-  let dragPoint: Point | null = null;
+  constructor (proto: HTMLElement, params: Partial<Draggable.Params> = {}) {
+    this.proto = proto;
+    this.params = {
+      container: document.body,
+      onDrop: noop,
+      onDrag: noop,
+      ...params,
+    };
+    this.ghostWrapper = this.createWrapper(this.params.container);
+    this.ghost = this.createGhost(proto);
+    this.ghostWrapper.appendChild(this.ghost);
+    this.proto.addEventListener('mousedown', this.startDrag);
+  }
 
-  function onMouseMove(e: MouseEvent) {
-    if (!dragPoint) {
+  public get el (): HTMLElement {
+    return this.ghost;
+  }
+
+  public destroy (): void {
+    this.dragPoint = null;
+    this.proto.removeEventListener('mousedown', this.startDrag);
+  }
+
+  private createWrapper (container: HTMLElement): HTMLElement {
+    const wrapper = document.createElement('div');
+    wrapper.style.width = px(container.clientWidth);
+    wrapper.style.height = px(container.clientHeight);
+    wrapper.style.position = 'relative';
+    return wrapper;
+  }
+
+  private createGhost (proto: HTMLElement): HTMLElement {
+    const ghost = proto.cloneNode(true) as HTMLElement;
+    ghost.removeAttribute('id');
+    ghost.style.position = 'absolute';
+    ghost.style.boxSizing = 'border-box';
+    return ghost;
+  }
+
+  private onMouseMove = (e: MouseEvent) => {
+    if (!this.dragPoint) {
       return;
     }
-    const ghostRect = ghost.getBoundingClientRect();
-    const containerRect = params.container.getBoundingClientRect();
+    const ghostRect = this.ghost.getBoundingClientRect();
+    const containerRect = this.ghostWrapper.getBoundingClientRect();
 
-    const left = e.clientX - dragPoint.x;
-    const top = e.clientY - dragPoint.y;
+    const left = e.clientX - this.dragPoint.x;
+    const top = e.clientY - this.dragPoint.y;
 
     const targetRect = {
       top,
@@ -37,92 +75,50 @@ function createGhost(params: GhostParams): Ghost {
       height: ghostRect.height,
     };
 
-    ghost.style.left = px(fitLeft(targetRect, containerRect));
-    ghost.style.top = px(fitTop(targetRect, containerRect));
+    this.ghost.style.left = px(fitLeft(targetRect, containerRect) - containerRect.left);
+    this.ghost.style.top = px(fitTop(targetRect, containerRect) - containerRect.top);
   }
 
-  function onMouseUp(e: Event) {
-    if (!dragPoint) {
+  private onMouseUp = (e: Event) => {
+    if (!this.dragPoint) {
       return;
     }
-    dragPoint = null;
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-    const rect = ghost.getBoundingClientRect();
-    params.container.removeChild(ghost);
-    params.onDrop({
-      x: rect.left,
-      y: rect.top,
+    this.dragPoint = null;
+    document.removeEventListener('mousemove', this.onMouseMove);
+    document.removeEventListener('mouseup', this.onMouseUp);
+    const rect = this.ghost.getBoundingClientRect();
+    const containerRect = this.ghostWrapper.getBoundingClientRect();
+    this.params.container.removeChild(this.ghostWrapper);
+    this.params.onDrop({
+      x: rect.left - containerRect.left,
+      y: rect.top - containerRect.top,
     });
   }
 
-  function startDrag(e: MouseEvent) {
-    const targetRect = params.proto.getBoundingClientRect();
-    dragPoint = {
+  private startDrag = (e: MouseEvent) => {
+    this.params.container.appendChild(this.ghostWrapper);
+    const targetRect = this.proto.getBoundingClientRect();
+    this.dragPoint = {
       x: e.clientX - targetRect.left,
       y: e.clientY - targetRect.top,
     };
 
-    ghost.style.width = px(targetRect.width);
-    ghost.style.height = px(targetRect.height);
-    ghost.style.left = px(targetRect.left);
-    ghost.style.top = px(targetRect.top);
-    params.container.appendChild(ghost);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    params.onDrag(ghost);
+    const containerRect = this.ghostWrapper.getBoundingClientRect();
+    this.ghost.style.width = px(targetRect.width);
+    this.ghost.style.height = px(targetRect.height);
+    this.ghost.style.left = px(targetRect.left - containerRect.left);
+    this.ghost.style.top = px(targetRect.top - containerRect.top);
+    document.addEventListener('mousemove', this.onMouseMove);
+    document.addEventListener('mouseup', this.onMouseUp);
+    this.params.onDrag(this.ghost);
   }
-
-  params.proto.addEventListener('mousedown', startDrag);
-
-  return {
-    el: ghost,
-    destroy () {
-      params.proto.removeEventListener('mousedown', startDrag);
-    },
-  };
 }
 
-interface GhostParams {
-  proto: HTMLElement;
-  container: HTMLElement;
-  onDrop: (point: Point) => void;
-  onDrag: (ghost: HTMLElement) => void;
-  restrictBounds: boolean;
+export namespace Draggable {
+  export interface Params {
+    container: HTMLElement;
+    onDrop: (point: Point) => void;
+    onDrag: (ghost: HTMLElement) => void;
+  }
 }
 
-interface Ghost {
-  el: HTMLElement;
-  destroy(): void;
-}
-
-const defaultParams: Params = {
-  container: document.body,
-  logger: console,
-  onDrop: noop,
-  onDrag: noop,
-  restrictBounds: false,
-};
-
-export function draggable(target: HTMLElement, inputParams: Partial<Params> = {}): void {
-  const params = {
-    ...defaultParams,
-    ...inputParams,
-  };
-
-  const ghost = createGhost({
-    container: params.container,
-    proto: target,
-    onDrop: params.onDrop,
-    onDrag: params.onDrag,
-    restrictBounds: params.restrictBounds,
-  });
-}
-
-export interface Params {
-  container: HTMLElement;
-  logger: Console;
-  onDrop: (point: Point) => void;
-  onDrag: (ghost: HTMLElement) => void;
-  restrictBounds: boolean;
-}
