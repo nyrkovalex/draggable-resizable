@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 
 <style>
+  html {
+    font-family: sans-serif;
+  }
+
+  body {
+    padding: 100px 0;
+  }
+
   #container {
     border: 1px solid red;
     width: 800px;
@@ -8,33 +16,172 @@
     margin: auto;
     -webkit-user-select: none;
     user-select: none;
+    position: relative;
   }
 
-  .draggable-resizable {
-    border: 1px solid green;
+  .draggable,
+  .resizable {
+    border: 1px solid;
     width: 200px;
     height: 200px;
     position: absolute;
   }
+
+  .draggable {
+    background: rgba(0, 255, 0, 0.5);
+    color: green;
+    border-color: green;
+  }
+
+  .resizable {
+    background: rgba(0, 0, 255, 0.5);
+    color: blue;
+    border-color: blue;
+    right: 100px;
+    top: 100px;
+    position: absolute;
+  }
+
+  .resize-handle {
+    background-color: red;
+    position: absolute;
+    opacity: 0.1;
+  }
+
+  .resize-handle:hover {
+    opacity: 0.3;
+  }
+
+  .left-handle {
+    cursor: w-resize;
+    width: 20px;
+    top: 10px;
+    bottom: 10px;
+    left: -10px;
+  }
+
+  .right-handle {
+    cursor: e-resize;
+    width: 20px;
+    top: 10px;
+    bottom: 10px;
+    right: -10px;
+  }
+
+  .top-handle {
+    cursor: n-resize;
+    height: 20px;
+    left: 10px;
+    right: 10px;
+    top: -10px;
+  }
+
+  .bottom-handle {
+    cursor: s-resize;
+    height: 20px;
+    left: 10px;
+    right: 10px;
+    bottom: -10px;
+  }
+
+  .topLeft-handle {
+    cursor: nw-resize;
+    height: 20px;
+    width: 20px;
+    left: -10px;
+    top: -10px;
+  }
+
+  .topRight-handle {
+    cursor: ne-resize;
+    height: 20px;
+    width: 20px;
+    right: -10px;
+    top: -10px;
+  }
+
+  .bottomRight-handle {
+    cursor: se-resize;
+    height: 20px;
+    width: 20px;
+    right: -10px;
+    bottom: -10px;
+  }
+
+  .bottomLeft-handle {
+    cursor: sw-resize;
+    height: 20px;
+    width: 20px;
+    left: -10px;
+    bottom: -10px;
+  }
 </style>
 
 <div id=container>
-  <div id=target class=draggable-resizable></div>
+  <div id=draggable class=draggable>
+    Draggable
+  </div>
+  <div id=resizable class=resizable>
+    Resizable
+    <div class="resize-handle left-handle"></div>
+    <div class="resize-handle right-handle"></div>
+    <div class="resize-handle top-handle"></div>
+    <div class="resize-handle bottom-handle"></div>
+    <div class="resize-handle topLeft-handle"></div>
+    <div class="resize-handle topRight-handle"></div>
+    <div class="resize-handle bottomRight-handle"></div>
+    <div class="resize-handle bottomLeft-handle"></div>
+  </div>
   <script src=index.js></script>
   <script>
-    const target = document.getElementById('target');
     const container = document.getElementById('container');
-    new dr.Draggable(target, {
+
+    const draggable = document.getElementById('draggable');
+    new dr.Draggable(draggable, {
       container,
       onDrag: () => {
         document.body.style.cursor = 'move';
-        target.style.display = 'none';
+        draggable.style.display = 'none';
       },
-      onDrop: ({ x, y }) => {
+      onDrop: ({ top, left }) => {
         document.body.style.cursor = 'default';
-        target.style.left = x + 'px';
-        target.style.top = y + 'px';
-        target.style.display = 'block';
+        draggable.style.left = left + 'px';
+        draggable.style.top = top + 'px';
+        draggable.style.display = 'block';
+      },
+    });
+
+    const resizable = document.getElementById('resizable');
+    const activeHandles = [
+      'left',
+      'right',
+      'top',
+      'bottom',
+      'topLeft',
+      'topRight',
+      'bottomRight',
+      'bottomLeft',
+    ];
+    const handles = activeHandles
+      .reduce(
+        (result, current) => ({
+          ...result,
+          [current]: resizable.querySelector(`.${current}-handle`)
+        }),
+        {}
+      );
+    new dr.Resizable(resizable, {
+      container,
+      handles,
+      onResizeStart: () => {
+        resizable.style.display = 'none';
+      },
+      onResizeEnd: ({ left, top, width, height }) => {
+        resizable.style.display = 'block';
+        resizable.style.left = left + 'px';
+        resizable.style.top = top + 'px';
+        resizable.style.width = width + 'px';
+        resizable.style.height = height + 'px';
       },
     });
   </script>

@@ -17,7 +17,6 @@
   "author": "nyrkovalex@gmail.com",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^3.5.1",
     "ts-loader": "^4.2.0",
     "tslint": "^5.9.1",
     "tslint-config-airbnb": "^5.8.0",
