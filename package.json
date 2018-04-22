@@ -1,0 +1,30 @@
+{
+  "name": "draggable-resizable",
+  "version": "1.0.0",
+  "description": "Draggable & resizable DOM plugin",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "webpack-dev-server",
+    "test": "exit 0",
+    "build": "tsc -p ."
+  },
+  "keywords": [
+    "draggable",
+    "resizable",
+    "dom",
+    "web"
+  ],
+  "author": "nyrkovalex@gmail.com",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^3.5.1",
+    "ts-loader": "^4.2.0",
+    "tslint": "^5.9.1",
+    "tslint-config-airbnb": "^5.8.0",
+    "tslint-microsoft-contrib": "^5.0.3",
+    "typescript": "^2.8.3",
+    "webpack": "^4.6.0",
+    "webpack-cli": "^2.0.15",
+    "webpack-dev-server": "^3.1.3"
+  }
+}

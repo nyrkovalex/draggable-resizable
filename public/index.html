@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+
+<style>
+  #container {
+    border: 1px solid red;
+    width: 800px;
+    height: 600px;
+    margin: auto;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .draggable-resizable {
+    border: 1px solid green;
+    width: 200px;
+    height: 200px;
+    position: absolute;
+  }
+</style>
+
+<div id=container>
+  <div id=target class=draggable-resizable></div>
+  <script src=index.js></script>
+  <script>
+    const target = document.getElementById('target');
+    const container = document.getElementById('container');
+    dr.draggable(target, {
+      container,
+      onDrag: () => {
+        document.body.style.cursor = 'move';
+        target.style.display = 'none';
+      },
+      onDrop: ({ x, y }) => {
+        document.body.style.cursor = 'default';
+        target.style.left = x + 'px';
+        target.style.top = y + 'px';
+        target.style.display = 'block';
+      },
+    });
+  </script>
+</div>
