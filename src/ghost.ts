@@ -1,7 +1,18 @@
-import { px, Rect, fitRect, growLeft, growRight, growTop, growBottom, GrowFn } from './size';
+import {
+  GrowFn,
+  Rect,
+  fitRect,
+  growBottom,
+  growLeft,
+  growRight,
+  growTop,
+  px,
+} from './size';
 import { Parametrized } from './util';
 
 export class Ghost extends Parametrized<Ghost.Params> {
+  private hBorder: number = 0;
+  private vBorder: number = 0;
   private readonly ghost: HTMLElement;
   private readonly ghostWrapper: HTMLElement;
 
@@ -10,6 +21,11 @@ export class Ghost extends Parametrized<Ghost.Params> {
     this.ghost = this.createGhost(params.proto);
     this.ghostWrapper = this.createWrapper(params.container);
     this.ghostWrapper.appendChild(this.ghost);
+    const boxSizing = getComputedStyle(this.params.proto).boxSizing;
+    if (boxSizing !== 'border-box') {
+      this.hBorder = this.params.proto.offsetWidth - this.params.proto.clientWidth;
+      this.vBorder = this.params.proto.offsetHeight - this.params.proto.clientHeight;
+    }
   }
 
   private createWrapper(container: HTMLElement): HTMLElement {
@@ -24,7 +40,6 @@ export class Ghost extends Parametrized<Ghost.Params> {
     const ghost = proto.cloneNode(true) as HTMLElement;
     ghost.removeAttribute('id');
     ghost.style.position = 'absolute';
-    ghost.style.boxSizing = 'border-box';
     return ghost;
   }
 
@@ -45,26 +60,25 @@ export class Ghost extends Parametrized<Ghost.Params> {
     return this;
   }
 
-  growLeft(left: number): this {
-    return this.grow(growLeft, left);
+  growLeft(value: number): this {
+    return this.grow(growLeft(this.params.minSize.width, this.hBorder), value);
   }
 
-  growRight(right: number): this {
-    return this.grow(growRight, right);
+  growRight(value: number): this {
+    return this.grow(growRight(this.params.minSize.width, this.hBorder), value);
   }
 
   growTop(value: number): this {
-    return this.grow(growTop, value);
+    return this.grow(growTop(this.params.minSize.height, this.vBorder), value);
   }
 
   growBottom(value: number): this {
-    return this.grow(growBottom, value);
+    return this.grow(growBottom(this.params.minSize.height, this.vBorder), value);
   }
 
   setSize({ width, height }: Ghost.SizeParams): this {
-    this.ghost.style.width = px(width);
-    this.ghost.style.height = px(height);
-
+    this.ghost.style.width = px(Math.max(width - this.hBorder, 1));
+    this.ghost.style.height = px(Math.max(height - this.vBorder, 1));
     return this;
   }
 
@@ -80,8 +94,7 @@ export class Ghost extends Parametrized<Ghost.Params> {
     const containerRect = this.ghostWrapper.getBoundingClientRect();
     this.ghost.style.left = px(rect.left - containerRect.left);
     this.ghost.style.top = px(rect.top - containerRect.top);
-    this.ghost.style.width = px(rect.width);
-    this.ghost.style.height = px(rect.height);
+    this.setSize(rect);
   }
 
   get el(): HTMLElement {
@@ -98,8 +111,8 @@ export class Ghost extends Parametrized<Ghost.Params> {
       left,
       right: left + rect.width,
       bottom: top + rect.height,
-      width: rect.width,
-      height: rect.height,
+      width: rect.width - this.vBorder,
+      height: rect.height - this.hBorder,
     };
   }
 }
@@ -108,6 +121,7 @@ export namespace Ghost {
   export interface Params {
     proto: HTMLElement;
     container: HTMLElement;
+    minSize: SizeParams;
   }
 
   export interface PlaceParams {

@@ -8,12 +8,24 @@ export interface Rect {
 }
 
 export function px(value: number) {
-  return value + 'px';
+  return Math.floor(value) + 'px';
 }
 
 export interface Point {
   x: number;
   y: number;
+}
+
+function updateRect(rect: Rect, update: Partial<Rect>): Rect {
+  return {
+    top: rect.top,
+    bottom: rect.bottom,
+    left: rect.left,
+    right: rect.right,
+    height: rect.height,
+    width: rect.width,
+    ...update,
+  };
 }
 
 export function fitRect(child: FitParams, container: Rect): Rect {
@@ -34,7 +46,7 @@ export function fitRect(child: FitParams, container: Rect): Rect {
     rect.top = container.top;
   }
 
-  const hitBottom = rect.top + rect.width >= container.bottom;
+  const hitBottom = rect.top + rect.height >= container.bottom;
   if (hitBottom) {
     rect.top = container.bottom - rect.height;
   }
@@ -53,119 +65,92 @@ export interface FitParams {
   height: number;
 }
 
-export interface PlaceParams {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
 
-export function sizeRect(params: PlaceParams, container: Rect): Rect {
-  const fixed: PlaceParams = params;
+export const growLeft: GrowFnFactory =
+  (minSize: number, borderSize: number) =>
+    (value: number, rect: Rect, container: Rect): Rect => {
+      let fixed = value;
+      const tooNarrow = rect.right - value <= minSize;
+      if (tooNarrow) {
+        fixed = rect.right - minSize - borderSize;
+      }
 
-  const hitLeft = fixed.left <= container.left;
-  if (hitLeft) {
-    fixed.left = container.left;
-  }
+      const tooWide = value < container.left;
+      if (tooWide) {
+        fixed = container.left;
+      }
 
-  const hitRight = fixed.right >= container.right;
-  if (hitRight) {
-    fixed.right = container.right;
-  }
+      return updateRect(rect, {
+        left: fixed,
+        width: rect.right - fixed,
+      });
+    };
 
-  const hitTop = fixed.top <= container.top;
-  if (hitTop) {
-    fixed.top = container.top;
-  }
+export const growRight: GrowFnFactory =
+  (minSize: number, borderSize: number) =>
+    (value: number, rect: Rect, container: Rect): Rect => {
+      let fixed = value;
+      const tooNarrow = fixed - rect.left <= minSize;
+      if (tooNarrow) {
+        fixed = rect.left + minSize + borderSize;
+      }
 
-  const hitBottom = fixed.bottom >= container.bottom;
-  if (hitBottom) {
-    fixed.bottom = container.bottom;
-  }
+      const tooWide = fixed > container.right;
+      if (tooWide) {
+        fixed = container.right;
+      }
 
-  return {
-    ...fixed,
-    width: fixed.right - fixed.left,
-    height: fixed.bottom - fixed.top,
-  };
-}
+      return updateRect(rect, {
+        ...rect,
+        width: fixed - rect.left,
+      });
+    };
 
-export function growLeft(value: number, rect: Rect, container: Rect): Rect {
-  let fixed = value;
-  const tooNarrow = rect.right - value <= 1;
-  if (tooNarrow) {
-    fixed = rect.right - 2;
-  }
+export const growTop: GrowFnFactory =
+  (minSize: number, borderSize: number) =>
+    (value: number, rect: Rect, container: Rect): Rect => {
+      let fixed = value;
 
-  const tooWide = value < container.left;
-  if (tooWide) {
-    fixed = container.left;
-  }
+      const tooShort = rect.bottom - fixed <= minSize;
+      if (tooShort) {
+        fixed = rect.bottom - minSize - borderSize;
+      }
 
-  return {
-    ...rect,
-    left: fixed,
-    width: rect.right - fixed,
-  };
-}
+      const tooHigh = fixed < container.top;
+      if (tooHigh) {
+        fixed = container.top;
+      }
 
-export function growRight(value: number, rect: Rect, container: Rect): Rect {
-  let fixed = value;
-  const tooNarrow = value - rect.left <= 1;
-  if (tooNarrow) {
-    fixed = rect.left + 2;
-  }
+      return updateRect(rect, {
+        top: fixed,
+        height: rect.bottom - fixed,
+      });
+    };
 
-  const tooWide = value > container.right;
-  if (tooWide) {
-    fixed = container.right;
-  }
+export const growBottom: GrowFnFactory =
+  (minSize: number, borderSize: number) =>
+    (value: number, rect: Rect, container: Rect): Rect => {
+      let fixed = value;
 
-  return {
-    ...rect,
-    width: fixed - rect.left,
-  };
-}
+      const tooShort = fixed - rect.top <= minSize;
+      if (tooShort) {
+        fixed = rect.top + minSize + borderSize;
+      }
 
-export function growTop(value: number, rect: Rect, container: Rect): Rect {
-  let fixed = value;
+      const tooHigh = fixed > container.bottom;
+      if (tooHigh) {
+        fixed = container.bottom;
+      }
 
-  const tooLow = rect.bottom - fixed <= 1;
-  if (tooLow) {
-    fixed = rect.bottom - 2;
-  }
-
-  const tooHigh = value < container.top;
-  if (tooHigh) {
-    fixed = container.top;
-  }
-
-  return {
-    ...rect,
-    top: fixed,
-    height: rect.bottom - fixed,
-  };
-}
-
-export function growBottom(value: number, rect: Rect, container: Rect): Rect {
-  let fixed = value;
-
-  const tooLow = fixed - rect.top <= 1;
-  if (tooLow) {
-    fixed = rect.top + 2;
-  }
-
-  const tooHigh = fixed > container.bottom;
-  if (tooHigh) {
-    fixed = container.bottom;
-  }
-
-  return {
-    ...rect,
-    height: fixed - rect.top,
-  };
-}
+      return updateRect(rect, {
+        height: fixed - rect.top,
+      });
+    };
 
 export interface GrowFn {
   (value: number, rect: Rect, container: Rect): Rect;
+}
+
+export interface GrowFnFactory {
+  (minSize: number, borderSize: number): GrowFn;
 }

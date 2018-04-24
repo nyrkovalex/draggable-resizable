@@ -18,6 +18,10 @@ export class Draggable extends Parametrized<Draggable.Params> implements IDestru
     this.ghost = new Ghost({
       proto: this.proto,
       container: this.params.container,
+      minSize: {
+        height: 1,
+        width: 1,
+      },
     });
     this.proto.addEventListener('mousedown', this.startDrag);
   }

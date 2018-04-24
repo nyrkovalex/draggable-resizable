@@ -173,10 +173,15 @@
     new dr.Resizable(resizable, {
       container,
       handles,
+      minSize: {
+        width: 20,
+        height: 20,
+      },
       onResizeStart: () => {
         resizable.style.display = 'none';
       },
-      onResizeEnd: ({ left, top, width, height }) => {
+      onResizeEnd: (args) => {
+        const { left, top, width, height } = args;
         resizable.style.display = 'block';
         resizable.style.left = left + 'px';
         resizable.style.top = top + 'px';

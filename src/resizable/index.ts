@@ -30,12 +30,17 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
       handles: {},
       onResizeStart: noop,
       onResizeEnd: noop,
+      minSize: {
+        height: 1,
+        width: 1,
+      },
       ...params,
     });
     this.proto = proto;
     this.ghost = new Ghost({
       proto,
       container: this.params.container,
+      minSize: this.params.minSize,
     });
     this.handles = this.bindHandlers(this.params.handles);
   }
@@ -80,6 +85,7 @@ export namespace Resizable {
     'bottomLeft';
 
   export interface Params {
+    minSize: Ghost.SizeParams;
     container: HTMLElement;
     keepAspectRatio: boolean;
     handles: Partial<Handles>;
