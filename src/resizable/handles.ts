@@ -43,20 +43,20 @@ export abstract class ResizeHandle extends
     document.removeEventListener('mouseup', this.onMouseUp);
   }
 
-  private onMouseMove = (e: MouseEvent) => {
+  private onMouseMove = (e: MouseEvent) => requestAnimationFrame(() => {
     if (!this.dragPoint) {
       return;
     }
     this.resize(this.dragPoint, e);
-  }
+  })
 
-  protected resizeLeft (dragPoint: DragPoint, e: MouseEvent) {
+  protected resizeLeft(dragPoint: DragPoint, e: MouseEvent) {
     const xDiff = dragPoint.x - e.clientX;
     const left = dragPoint.protoRect.left - xDiff;
     this.params.ghost.growLeft(left);
   }
 
-  protected resizeTop (dragPoint: DragPoint, e: MouseEvent) {
+  protected resizeTop(dragPoint: DragPoint, e: MouseEvent) {
     const yDiff = dragPoint.y - e.clientY;
     const top = dragPoint.protoRect.top - yDiff;
     this.params.ghost.growTop(top);
@@ -97,52 +97,52 @@ export namespace ResizeHandle {
 }
 
 export class LeftResizeHandle extends ResizeHandle {
-  resize (dragPoint: DragPoint, e: MouseEvent) {
+  resize(dragPoint: DragPoint, e: MouseEvent) {
     this.resizeLeft(dragPoint, e);
   }
 }
 
 export class RightResizeHandle extends ResizeHandle {
-  resize (dragPoint: DragPoint, e: MouseEvent) {
+  resize(dragPoint: DragPoint, e: MouseEvent) {
     this.resizeRight(dragPoint, e);
   }
 }
 
 export class TopResizeHandle extends ResizeHandle {
-  resize (dragPoint: DragPoint, e: MouseEvent) {
+  resize(dragPoint: DragPoint, e: MouseEvent) {
     this.resizeTop(dragPoint, e);
   }
 }
 
 export class BottomResizeHandle extends ResizeHandle {
-  resize (dragPoint: DragPoint, e: MouseEvent) {
+  resize(dragPoint: DragPoint, e: MouseEvent) {
     this.resizeBottom(dragPoint, e);
   }
 }
 
 export class TopLeftResizeHandle extends ResizeHandle {
-  resize (dragPoint: DragPoint, e: MouseEvent) {
+  resize(dragPoint: DragPoint, e: MouseEvent) {
     this.resizeLeft(dragPoint, e);
     this.resizeTop(dragPoint, e);
   }
 }
 
 export class TopRightResizeHandle extends ResizeHandle {
-  resize (dragPoint: DragPoint, e: MouseEvent) {
+  resize(dragPoint: DragPoint, e: MouseEvent) {
     this.resizeRight(dragPoint, e);
     this.resizeTop(dragPoint, e);
   }
 }
 
 export class BottomRightResizeHandle extends ResizeHandle {
-  resize (dragPoint: DragPoint, e: MouseEvent) {
+  resize(dragPoint: DragPoint, e: MouseEvent) {
     this.resizeRight(dragPoint, e);
     this.resizeBottom(dragPoint, e);
   }
 }
 
 export class BottomLeftResizeHandle extends ResizeHandle {
-  resize (dragPoint: DragPoint, e: MouseEvent) {
+  resize(dragPoint: DragPoint, e: MouseEvent) {
     this.resizeLeft(dragPoint, e);
     this.resizeBottom(dragPoint, e);
   }

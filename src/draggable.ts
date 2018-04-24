@@ -31,7 +31,7 @@ export class Draggable extends Parametrized<Draggable.Params> implements IDestru
     this.proto.removeEventListener('mousedown', this.startDrag);
   }
 
-  private onMouseMove = (e: MouseEvent) => {
+  private onMouseMove = (e: MouseEvent) => requestAnimationFrame(() => {
     if (!this.dragPoint) {
       return;
     }
@@ -39,7 +39,7 @@ export class Draggable extends Parametrized<Draggable.Params> implements IDestru
     const left = e.clientX - this.dragPoint.x;
     const top = e.clientY - this.dragPoint.y;
     this.ghost.place({ left, top });
-  }
+  })
 
   private onMouseUp = () => {
     if (!this.dragPoint) {
