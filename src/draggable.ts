@@ -1,13 +1,17 @@
-import { Point, Rect } from './size';
+import {
+  Point,
+  Rect,
+} from './size';
 import { Ghost } from './ghost';
-import { Parametrized, IDestructable, noop } from './util';
+import { IDestructable, noop } from './util';
+import { Haunted } from './hanuted';
 
-export class Draggable extends Parametrized<Draggable.Params> implements IDestructable {
+export class Draggable extends Haunted<Draggable.Params> implements IDestructable {
   private readonly ghost: Ghost;
   private readonly proto: HTMLElement;
   private dragPoint: Point | null = null;
 
-  constructor (proto: HTMLElement, params: Partial<Draggable.Params> = {}) {
+  constructor(proto: HTMLElement, params: Partial<Draggable.Params> = {}) {
     super({
       container: document.body,
       onDrop: noop,
@@ -15,18 +19,11 @@ export class Draggable extends Parametrized<Draggable.Params> implements IDestru
       ...params,
     });
     this.proto = proto;
-    this.ghost = new Ghost({
-      proto: this.proto,
-      container: this.params.container,
-      minSize: {
-        height: 1,
-        width: 1,
-      },
-    });
+    this.ghost = this.createGhost(proto, this.params.container);
     this.proto.addEventListener('mousedown', this.startDrag);
   }
 
-  destroy (): void {
+  destroy(): void {
     this.dragPoint = null;
     this.proto.removeEventListener('mousedown', this.startDrag);
   }

@@ -1,5 +1,5 @@
 export interface IDestructable {
-  destroy (): void;
+  destroy(): void;
 }
 
 export abstract class Parametrized<P> {
@@ -11,4 +11,20 @@ export abstract class Parametrized<P> {
 }
 
 export function noop() {
+}
+
+
+export interface SizeParams {
+  width: number;
+  height: number;
+}
+
+export interface PlaceParams {
+  left: number;
+  top: number;
+}
+
+export interface BorderParams {
+  vertical: number;
+  horizontal: number;
 }

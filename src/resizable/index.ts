@@ -1,13 +1,14 @@
 import { Ghost } from '../ghost';
 import * as handles from './handles';
-import { IDestructable, Parametrized, noop } from '../util';
-import { Rect } from '../size';
+import { IDestructable, noop, SizeParams } from '../util';
+import { Rect, IResizeStrategy, SimpleResizeStrategy } from '../size';
+import { Haunted } from '../hanuted';
 
 type HandleFactory = { [key: string]: handles.ResizeHandle.Constructor } & {
   [K in keyof Resizable.Handles]: handles.ResizeHandle.Constructor
 };
 
-export class Resizable extends Parametrized<Resizable.Params> implements IDestructable {
+export class Resizable extends Haunted<Resizable.Params> implements IDestructable {
   private readonly proto: HTMLElement;
   private readonly ghost: Ghost;
   private readonly handles: handles.ResizeHandle[];
@@ -37,11 +38,7 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
       ...params,
     });
     this.proto = proto;
-    this.ghost = new Ghost({
-      proto,
-      container: this.params.container,
-      minSize: this.params.minSize,
-    });
+    this.ghost = this.createGhost(proto, this.params.container);
     this.handles = this.bindHandlers(this.params.handles);
   }
 
@@ -71,6 +68,13 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
       })
       .filter(Boolean) as handles.ResizeHandle[];
   }
+
+  protected createResizeStrategy(proto: HTMLElement): IResizeStrategy {
+    return new SimpleResizeStrategy({
+      borderSize: this.countBorderSize(proto),
+      minSize: this.params.minSize,
+    });
+  }
 }
 
 export namespace Resizable {
@@ -85,7 +89,7 @@ export namespace Resizable {
     'bottomLeft';
 
   export interface Params {
-    minSize: Ghost.SizeParams;
+    minSize: SizeParams;
     container: HTMLElement;
     keepAspectRatio: boolean;
     handles: Partial<Handles>;
