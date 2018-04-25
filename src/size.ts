@@ -10,7 +10,7 @@ export interface Rect {
 }
 
 export function px(value: number) {
-  return Math.floor(value) + 'px';
+  return Math.round(value) + 'px';
 }
 
 export interface Point {
@@ -65,19 +65,38 @@ export interface IResizeStrategy {
   growBottom: GrowFunction;
   growLeft: GrowFunction;
   growRight: GrowFunction;
+  changeRect(
+    rect: Rect,
+    container: Rect,
+    fitInto: IResizeStrategy.ChangeRectParams,
+    aspectRatio?: number,
+  ): Rect;
+}
+
+export namespace IResizeStrategy {
+  export interface ChangeRectParams extends PlaceParams {
+    right: number;
+    bottom: number;
+  }
 }
 
 export interface GrowFunction {
-  (value: number, rect: Rect, container: Rect): Rect;
+  (value: number, rect: Rect, container: Rect, aspectRatio?: number): Rect;
 }
 
 export abstract class BaseResizeStrategy
   extends Parametrized<BaseResizeStrategy.Params>
   implements IResizeStrategy {
-  abstract growTop(value: number, rect: Rect, container: Rect): Rect;
-  abstract growBottom(value: number, rect: Rect, container: Rect): Rect;
-  abstract growLeft(value: number, rect: Rect, container: Rect): Rect;
-  abstract growRight(value: number, rect: Rect, container: Rect): Rect;
+  abstract growTop(value: number, rect: Rect, container: Rect, aspectRatio?: number): Rect;
+  abstract growBottom(value: number, rect: Rect, container: Rect, aspectRatio?: number): Rect;
+  abstract growLeft(value: number, rect: Rect, container: Rect, aspectRatio?: number): Rect;
+  abstract growRight(value: number, rect: Rect, container: Rect, aspectRatio?: number): Rect;
+  abstract changeRect(
+    rect: Rect,
+    container: Rect,
+    fitInto: IResizeStrategy.ChangeRectParams,
+    aspectRatio?: number,
+  ): Rect;
 
   protected updateRect(rect: Rect, update: Partial<Rect>): Rect {
     return {
@@ -100,7 +119,7 @@ export namespace BaseResizeStrategy {
 }
 
 export class SimpleResizeStrategy extends BaseResizeStrategy {
-  growTop(value: number, rect: Rect, container: Rect): Rect {
+  growTop(value: number, rect: Rect, container: Rect, aspectRatio: number = 0): Rect {
     let fixed = value;
 
     const tooShort = rect.bottom - fixed <= this.params.minSize.height;
@@ -113,13 +132,32 @@ export class SimpleResizeStrategy extends BaseResizeStrategy {
       fixed = container.top;
     }
 
+    let top = fixed;
+    let height = rect.bottom - fixed;
+
+    if (!aspectRatio) {
+      return this.updateRect(rect, {
+        height,
+        top,
+      });
+    }
+
+    let width = aspectRatio * height;
+    const hitRight = rect.left + width >= container.right;
+    if (hitRight) {
+      width = container.right - rect.left;
+      height = width / aspectRatio;
+      top = rect.bottom - height;
+    }
+
     return this.updateRect(rect, {
-      top: fixed,
-      height: rect.bottom - fixed,
+      height,
+      width,
+      top,
     });
   }
 
-  growBottom(value: number, rect: Rect, container: Rect): Rect {
+  growBottom(value: number, rect: Rect, container: Rect, aspectRatio: number = 0): Rect {
     let fixed = value;
 
     const tooShort = fixed - rect.top <= this.params.minSize.height;
@@ -132,8 +170,24 @@ export class SimpleResizeStrategy extends BaseResizeStrategy {
       fixed = container.bottom;
     }
 
+    let height = fixed - rect.top;
+
+    if (!aspectRatio) {
+      return this.updateRect(rect, {
+        height: fixed - rect.top,
+      });
+    }
+
+    let width = aspectRatio * height;
+    const hitRight = rect.left + width >= container.right;
+    if (hitRight) {
+      width = container.right - rect.left;
+      height = width / aspectRatio;
+    }
+
     return this.updateRect(rect, {
-      height: fixed - rect.top,
+      height,
+      width,
     });
   }
 
@@ -155,7 +209,7 @@ export class SimpleResizeStrategy extends BaseResizeStrategy {
     });
   }
 
-  growRight(value: number, rect: Rect, container: Rect): Rect {
+  growRight(value: number, rect: Rect, container: Rect, aspectRatio?: number): Rect {
     let fixed = value;
     const tooNarrow = fixed - rect.left <= this.params.minSize.width;
     if (tooNarrow) {
@@ -167,9 +221,90 @@ export class SimpleResizeStrategy extends BaseResizeStrategy {
       fixed = container.right;
     }
 
+    let width = fixed - rect.left;
+
+    if (!aspectRatio) {
+      return this.updateRect(rect, {
+        ...rect,
+        width,
+      });
+    }
+
+    let height = width / aspectRatio;
+    const hitBottom = rect.top + height >= container.bottom;
+    if (hitBottom) {
+      height = container.bottom - rect.top;
+      width = aspectRatio / height;
+    }
+
     return this.updateRect(rect, {
       ...rect,
-      width: fixed - rect.left,
+      width,
+      height,
     });
   }
+
+  changeRect(
+    rect: Rect,
+    container: Rect,
+    fitInto: IResizeStrategy.ChangeRectParams,
+    aspectRatio: number = 0,
+  ) {
+    return this.fixBounds(rect, fitInto, container);
+  }
+
+  private fixBounds(
+    rect: Rect,
+    requestedBounds: IResizeStrategy.ChangeRectParams,
+    container: Rect,
+  ): Rect {
+    return {
+      left: Math.max(requestedBounds.left, container.left),
+      bottom: Math.min(requestedBounds.bottom, container.bottom),
+      top: Math.max(requestedBounds.top, container.top),
+      right: Math.min(requestedBounds.right, container.right),
+      get width() {
+        return this.right - this.left;
+      },
+      get height() {
+        return this.bottom - this.top;
+      },
+    };
+  }
+
+  // private fitByWidth(
+  //   rect: Rect,
+  //   bounds: Rect,
+  //   aspectRatio: number = 0,
+  // ) {
+  //   if (aspectRatio <= 0) {
+  //     return bounds;
+  //   }
+
+  //   const height = bounds.width / aspectRatio;
+  //   return new DOMRect(
+  //     bounds.left,
+  //     bounds.top,
+  //     bounds.width,
+  //     height,
+  //   );
+  // }
+
+  // private fitByHeight(
+  //   rect: Rect,
+  //   bounds: Rect,
+  //   container: Rect,
+  //   aspectRatio: number = 0,
+  // ) {
+  //   if (aspectRatio <= 0) {
+  //     return bounds;
+  //   }
+  //   const width = bounds.height * aspectRatio;
+  //   return new DOMRect(
+  //     bounds.left,
+  //     bounds.top,
+  //     width,
+  //     bounds.height,
+  //   );
+  // }
 }

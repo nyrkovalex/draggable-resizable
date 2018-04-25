@@ -28,3 +28,10 @@ export interface BorderParams {
   vertical: number;
   horizontal: number;
 }
+
+export interface Bounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
