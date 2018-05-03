@@ -1,11 +1,11 @@
 import {
   Rect,
   px,
-  IResizeStrategy,
-  GrowFunction,
   IPlaceStrategy,
+  SizeParams,
+  PlaceParams,
 } from './size';
-import { Parametrized, SizeParams, PlaceParams, BorderParams, Bounds } from './util';
+import { Parametrized, BorderParams } from './util';
 
 export class Ghost extends Parametrized<Ghost.Params> {
   private readonly ghost: HTMLElement;
@@ -20,7 +20,7 @@ export class Ghost extends Parametrized<Ghost.Params> {
 
   place(params: PlaceParams): this {
     const ghostRect = this.ghost.getBoundingClientRect();
-    const containerRect = this.ghostWrapper.getBoundingClientRect();
+    const containerRect = new Rect(this.ghostWrapper.getBoundingClientRect());
 
     const targetRect = {
       top: params.top,
@@ -35,52 +35,10 @@ export class Ghost extends Parametrized<Ghost.Params> {
     return this;
   }
 
-  growLeft(value: number): this {
-    return this.grow(
-      this.params.resizeStrategy.growLeft.bind(this.params.resizeStrategy),
-      value);
-  }
-
-  growRight(value: number, aspectRatio: number = 0): this {
-    return this.grow(
-      this.params.resizeStrategy.growRight.bind(this.params.resizeStrategy),
-      value,
-      aspectRatio,
-    );
-  }
-
-  growTop(value: number, aspectRatio: number = 0): this {
-    return this.grow(
-      this.params.resizeStrategy.growTop.bind(this.params.resizeStrategy),
-      value,
-      aspectRatio,
-    );
-  }
-
-  growBottom(value: number, aspectRatio: number = 0): this {
-    return this.grow(
-      this.params.resizeStrategy.growBottom.bind(this.params.resizeStrategy),
-      value,
-      aspectRatio,
-    );
-  }
-
   setSize({ width, height }: SizeParams): this {
     this.ghost.style.width = px(width - this.params.borderSizes.horizontal);
     this.ghost.style.height = px(height - this.params.borderSizes.vertical);
     return this;
-  }
-
-  fitInto(bounds: Bounds, aspectRatio: number = 0): this {
-    const rect = this.ghost.getBoundingClientRect();
-    const containerRect = this.ghostWrapper.getBoundingClientRect();
-    const newRect = this.params.resizeStrategy.changeRect(
-      rect,
-      containerRect,
-      bounds,
-      aspectRatio,
-    );
-    return this.setRect(newRect);
   }
 
   get el(): HTMLElement {
@@ -92,29 +50,19 @@ export class Ghost extends Parametrized<Ghost.Params> {
     const containerRect = this.ghostWrapper.getBoundingClientRect();
     const left = rect.left - containerRect.left;
     const top = rect.top - containerRect.top;
-    return {
+    return new Rect({
       top,
       left,
-      right: left + rect.width,
-      bottom: top + rect.height,
-      width: rect.width - this.params.borderSizes.horizontal,
-      height: rect.height - this.params.borderSizes.vertical,
-    };
+      right: left + rect.width - this.params.borderSizes.horizontal,
+      bottom: top + rect.height - this.params.borderSizes.vertical,
+    });
   }
 
   get containerRect(): Rect {
-    return this.ghostWrapper.getBoundingClientRect();
+    return new Rect(this.ghostWrapper.getBoundingClientRect());
   }
 
-  private grow(growFn: GrowFunction, value: number, aspectRatio: number = 0): this {
-    const containerRect = this.ghostWrapper.getBoundingClientRect();
-    const ghostRect = this.ghost.getBoundingClientRect();
-    const sizedRect = growFn(value, ghostRect, containerRect, aspectRatio);
-    this.setRect(sizedRect);
-    return this;
-  }
-
-  private setRect(rect: PlaceParams & SizeParams): this {
+  setRect(rect: PlaceParams & SizeParams): this {
     const containerRect = this.ghostWrapper.getBoundingClientRect();
     this.ghost.style.left = px(rect.left - containerRect.left);
     this.ghost.style.top = px(rect.top - containerRect.top);
@@ -142,7 +90,6 @@ export namespace Ghost {
   export interface Params {
     proto: HTMLElement;
     container: HTMLElement;
-    resizeStrategy: IResizeStrategy;
     placeStrategy: IPlaceStrategy;
     borderSizes: BorderParams;
   }

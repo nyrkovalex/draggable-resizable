@@ -14,24 +14,7 @@ export function noop() {
 }
 
 
-export interface SizeParams {
-  width: number;
-  height: number;
-}
-
-export interface PlaceParams {
-  left: number;
-  top: number;
-}
-
 export interface BorderParams {
   vertical: number;
   horizontal: number;
-}
-
-export interface Bounds {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
 }

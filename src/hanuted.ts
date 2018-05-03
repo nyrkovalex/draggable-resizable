@@ -1,5 +1,5 @@
 import { Parametrized } from './util';
-import { IResizeStrategy, IPlaceStrategy, SimpleResizeStrategy, SimplePlaceStrategy } from './size';
+import { IPlaceStrategy, SimplePlaceStrategy } from './size';
 import { Ghost } from './ghost';
 
 export abstract class Haunted<T> extends Parametrized<T> {
@@ -20,16 +20,6 @@ export abstract class Haunted<T> extends Parametrized<T> {
     return new SimplePlaceStrategy();
   }
 
-  protected createResizeStrategy(proto: HTMLElement): IResizeStrategy {
-    return new SimpleResizeStrategy({
-      borderSize: this.countBorderSize(proto),
-      minSize: {
-        height: 1,
-        width: 1,
-      },
-    });
-  }
-
   protected createGhost(proto: HTMLElement, container: HTMLElement): Ghost {
     const borderSizes = this.countBorderSize(proto);
     return new Ghost({
@@ -37,7 +27,6 @@ export abstract class Haunted<T> extends Parametrized<T> {
       container,
       borderSizes,
       placeStrategy: this.createPlaceStrategy(),
-      resizeStrategy: this.createResizeStrategy(proto),
     });
   }
 }

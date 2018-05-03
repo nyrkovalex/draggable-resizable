@@ -1,7 +1,7 @@
 import { Ghost } from '../ghost';
 import * as handles from './handles';
-import { IDestructable, noop, SizeParams, BorderParams } from '../util';
-import { Rect, IResizeStrategy, SimpleResizeStrategy } from '../size';
+import { IDestructable, noop, BorderParams } from '../util';
+import { Rect, SizeParams } from '../size';
 import { Haunted } from '../hanuted';
 
 type HandleFactory = { [key: string]: handles.ResizeHandle.Constructor } & {
@@ -66,26 +66,14 @@ export class Resizable extends Haunted<Resizable.Params> implements IDestructabl
           proto: this.proto,
           onResizeEnd: this.params.onResizeEnd,
           keepAspectRatio: this.params.keepAspectRatio,
-          minSize: this.params.minSize,
-          borderSize: this.borderSize,
+          minSize: {
+            height: this.params.minSize.height + this.borderSize.vertical,
+            width: this.params.minSize.width + this.borderSize.horizontal,
+          },
           onResizeStart: () => this.params.onResizeStart(key),
         });
       })
       .filter(Boolean) as handles.ResizeHandle[];
-  }
-
-  protected createResizeStrategy(proto: HTMLElement): IResizeStrategy {
-    if (this.params.keepAspectRatio) {
-      return new SimpleResizeStrategy({
-        borderSize: this.borderSize,
-        minSize: this.params.minSize,
-      });
-    }
-
-    return new SimpleResizeStrategy({
-      borderSize: this.countBorderSize(proto),
-      minSize: this.params.minSize,
-    });
   }
 }
 

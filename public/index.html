@@ -47,7 +47,17 @@
     height: 200px;
   }
 
-  .resizable.fixed-ratio {
+  .resizable.tall {
+    background: rgba(0, 0, 128, 0.5);
+    color: navy;
+    border-color: navy;
+    left: 400px;
+    bottom: 100px;
+    width: 100px;
+    height: 200px;
+  }
+
+  .resizable.wide {
     background: rgba(127, 0, 255, 0.5);
     color: darkviolet;
     border-color: darkviolet;
@@ -147,8 +157,19 @@
     <div class="resize-handle bottomRight-handle"></div>
     <div class="resize-handle bottomLeft-handle"></div>
   </div>
-  <div id=fixed-ratio class="resizable fixed-ratio">
-    Fixed Ratio
+  <div id=fixed-ratio-wide class="resizable wide">
+    Fixed Wide
+    <div class="resize-handle left-handle"></div>
+    <div class="resize-handle right-handle"></div>
+    <div class="resize-handle top-handle"></div>
+    <div class="resize-handle bottom-handle"></div>
+    <div class="resize-handle topLeft-handle"></div>
+    <div class="resize-handle topRight-handle"></div>
+    <div class="resize-handle bottomRight-handle"></div>
+    <div class="resize-handle bottomLeft-handle"></div>
+  </div>
+  <div id=fixed-ratio-tall class="resizable tall">
+    Fixed Tall
     <div class="resize-handle left-handle"></div>
     <div class="resize-handle right-handle"></div>
     <div class="resize-handle top-handle"></div>
@@ -165,10 +186,14 @@
     createDraggable('draggable');
     createDraggable('resizable');
     createResizable('resizable');
-    createResizable('fixed-ratio', {
+    createResizable('fixed-ratio-wide', {
       keepAspectRatio: true,
     });
-    createDraggable('fixed-ratio');
+    createDraggable('fixed-ratio-wide');
+    createResizable('fixed-ratio-tall', {
+      keepAspectRatio: true,
+    });
+    createDraggable('fixed-ratio-tall');
 
     function createDraggable(elementId) {
       const draggable = document.getElementById(elementId);

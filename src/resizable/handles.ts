@@ -1,9 +1,9 @@
-import { Point, Rect } from '../size';
+import { Point, Rect, Bounds, SizeParams } from '../size';
 import { Ghost } from '../ghost';
-import { Parametrized, IDestructable, Bounds, SizeParams, BorderParams } from '../util';
+import { Parametrized, IDestructable } from '../util';
 
 export interface DragPoint extends Point {
-  protoBounds: Bounds;
+  protoRect: Rect;
 }
 
 export abstract class ResizeHandle extends
@@ -35,22 +35,17 @@ export abstract class ResizeHandle extends
       left: targetRect.left,
       top: targetRect.top,
     });
-    this.dragPoint = this.captureDragPoint(e, targetRect);
+    this.dragPoint = this.captureDragPoint(e, new Rect(targetRect));
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mouseup', this.onMouseUp);
     this.params.onResizeStart();
   }
 
-  private captureDragPoint(e: MouseEvent, targetRect: Rect) {
+  private captureDragPoint(e: MouseEvent, protoRect: Rect) {
     return {
+      protoRect,
       x: e.clientX,
       y: e.clientY,
-      protoBounds: {
-        bottom: targetRect.bottom,
-        left: targetRect.left,
-        right: targetRect.right,
-        top: targetRect.top,
-      },
     };
   }
 
@@ -68,161 +63,91 @@ export abstract class ResizeHandle extends
       return;
     }
     const bounds = this.boundsUpdate(this.dragPoint, e);
-    const fixedBounds = this.fixBounds({
-      ...this.dragPoint.protoBounds,
-      ...bounds,
-    });
+    const fixedBounds = this.fixBounds(this.dragPoint.protoRect.withUpdate(bounds));
     if (!this.params.keepAspectRatio) {
-      this.params.ghost.fitInto(fixedBounds);
+      this.params.ghost.setRect(fixedBounds);
       return;
     }
     const boundsAspectRatio = fixedBounds.width / fixedBounds.height;
     const fitByWidth = boundsAspectRatio.toFixed(8) < this.aspectRatio.toFixed(8);
     const fittedBounds = fitByWidth
-      ? this.fitByWidth(fixedBounds)
-      : this.fitByHeight(fixedBounds);
-    this.params.ghost.fitInto(
-      fittedBounds,
-      this.aspectRatio,
-    );
+      ? this.fitByWidth(fixedBounds, this.dragPoint)
+      : this.fitByHeight(fixedBounds, this.dragPoint);
+    this.params.ghost.setRect(fittedBounds);
   })
 
   protected leftBound(dragPoint: DragPoint, e: MouseEvent) {
     const xDiff = dragPoint.x - e.clientX;
-    const left = dragPoint.protoBounds.left - xDiff;
+    const left = dragPoint.protoRect.left - xDiff;
     return Math.min(
-      dragPoint.protoBounds.right -
-      this.params.minSize.width -
-      this.params.borderSize.horizontal,
+      dragPoint.protoRect.right -
+      this.params.minSize.width,
       left,
     );
   }
 
   protected topBound(dragPoint: DragPoint, e: MouseEvent) {
     const yDiff = dragPoint.y - e.clientY;
-    const top = dragPoint.protoBounds.top - yDiff;
+    const top = dragPoint.protoRect.top - yDiff;
     return Math.min(
-      dragPoint.protoBounds.bottom -
-      this.params.minSize.height -
-      this.params.borderSize.vertical,
+      dragPoint.protoRect.bottom -
+      this.params.minSize.height,
       top,
     );
   }
 
   protected rightBound(dragPoint: DragPoint, e: MouseEvent) {
     const xDiff = e.clientX - dragPoint.x;
-    const right = dragPoint.protoBounds.right + xDiff;
+    const right = dragPoint.protoRect.right + xDiff;
     return Math.max(
-      dragPoint.protoBounds.left +
-      this.params.minSize.width +
-      this.params.borderSize.horizontal,
+      dragPoint.protoRect.left +
+      this.params.minSize.width,
       right,
     );
   }
 
   protected bottomBound(dragPoint: DragPoint, e: MouseEvent) {
     const yDiff = e.clientY - dragPoint.y;
-    const bottom = dragPoint.protoBounds.bottom + yDiff;
+    const bottom = dragPoint.protoRect.bottom + yDiff;
     return Math.max(
-      dragPoint.protoBounds.top +
-      this.params.minSize.height +
-      this.params.borderSize.vertical,
+      dragPoint.protoRect.top +
+      this.params.minSize.height,
       bottom,
     );
   }
 
-  protected fixBounds(requestedBounds: Bounds): Rect {
+  protected fixBounds(requestedBounds: Rect): Rect {
     const container = this.params.ghost.containerRect;
-    return {
+    return requestedBounds.withUpdate({
       left: Math.max(requestedBounds.left, container.left),
       bottom: Math.min(requestedBounds.bottom, container.bottom),
       top: Math.max(requestedBounds.top, container.top),
       right: Math.min(requestedBounds.right, container.right),
-      get width() {
-        return this.right - this.left;
-      },
-      get height() {
-        return this.bottom - this.top;
-      },
-    };
+    });
   }
 
-  protected fitBottom(bounds: Bounds): Bounds {
-    const width = bounds.right - bounds.left;
-    const height = width / this.aspectRatio;
-    const bottom = bounds.top + height;
-    return {
-      bottom,
-      top: bounds.top,
-      right: bounds.right,
-      left: bounds.left,
-    };
+  protected calculateHorizontalBounds(bounds: Rect, dragPoint: DragPoint) {
+    const height = Math.max(bounds.bottom - bounds.top, this.params.minSize.height);
+    const width = Math.max(height * this.aspectRatio, this.params.minSize.width);
+    const maxLeftIncrement = dragPoint.protoRect.left - bounds.left;
+    const maxRightIncrement = bounds.right - dragPoint.protoRect.right;
+    const targetIncrement = (width - dragPoint.protoRect.width) / 2;
+    const increment = Math.min(maxLeftIncrement, maxRightIncrement, targetIncrement);
+    const left = Math.max(dragPoint.protoRect.left - increment, bounds.left);
+    const right = Math.min(dragPoint.protoRect.right + increment, bounds.right);
+    return { right, left };
   }
 
-  protected fitLeft(bounds: Bounds): Bounds {
-    const height = bounds.bottom - bounds.top;
-    const width = height * this.aspectRatio;
-    const left = bounds.right - width;
-    return {
-      left,
-      right: bounds.right,
-      top: bounds.top,
-      bottom: bounds.bottom,
-    };
-  }
-
-  protected fitTop(bounds: Bounds): Bounds {
-    const width = bounds.right - bounds.left;
-    const height = width / this.aspectRatio;
-    const top = bounds.bottom - height;
-    return {
-      top,
-      bottom: bounds.bottom,
-      right: bounds.right,
-      left: bounds.left,
-    };
-  }
-
-  protected fitRight(bounds: Bounds): Bounds {
-    const height = bounds.bottom - bounds.top;
-    const width = height * this.aspectRatio;
-    const right = bounds.left + width;
-    return {
-      right,
-      left: bounds.left,
-      top: bounds.top,
-      bottom: bounds.bottom,
-    };
-  }
-
-  protected fitHorizontalCenter(bounds: Bounds): Bounds {
-    const height = bounds.bottom - bounds.top;
-    const width = height * this.aspectRatio;
-    const oldWidth = bounds.right - bounds.left;
-    const increment = (width - oldWidth) / 2;
-    const left = bounds.left - increment;
-    const right = bounds.right + increment;
-    return {
-      right,
-      left,
-      top: bounds.top,
-      bottom: bounds.bottom,
-    };
-  }
-
-  protected fitVerticalCenter(bounds: Bounds): Bounds {
-    const width = bounds.right - bounds.left;
-    const height = width / this.aspectRatio;
-    const oldHeight = bounds.bottom - bounds.top;
-    const increment = (height - oldHeight) / 2;
-    const top = bounds.top - increment;
-    const bottom = bounds.bottom + increment;
-    return {
-      top,
-      bottom,
-      right: bounds.right,
-      left: bounds.left,
-    };
+  protected calculateVerticalBounds(bounds: Rect, dragPoint: DragPoint) {
+    const width = Math.max(bounds.right - bounds.left, this.params.minSize.width);
+    const height = Math.max(width / this.aspectRatio, this.params.minSize.height);
+    const maxTopIncrement = dragPoint.protoRect.top - bounds.top;
+    const maxBottomIncrement = bounds.bottom - dragPoint.protoRect.bottom;
+    const targetIncrement = (height - dragPoint.protoRect.height) / 2;
+    const increment = Math.min(maxTopIncrement, maxBottomIncrement, targetIncrement);
+    const top = Math.max(dragPoint.protoRect.top - increment, bounds.top);
+    const bottom = Math.min(dragPoint.protoRect.bottom + increment, bounds.bottom);
+    return { bottom, top };
   }
 
   destroy(): void {
@@ -230,8 +155,8 @@ export abstract class ResizeHandle extends
   }
 
   protected abstract boundsUpdate(dragPoint: Point, e: MouseEvent): Partial<Bounds>;
-  protected abstract fitByWidth(bounds: Bounds): Bounds;
-  protected abstract fitByHeight(bounds: Bounds): Bounds;
+  protected abstract fitByWidth(bounds: Rect, dragPoint?: DragPoint): Rect;
+  protected abstract fitByHeight(bounds: Rect, dragPoint?: DragPoint): Rect;
 }
 
 export namespace ResizeHandle {
@@ -242,7 +167,6 @@ export namespace ResizeHandle {
     ghost: Ghost;
     keepAspectRatio: boolean;
     minSize: SizeParams;
-    borderSize: BorderParams;
     onResizeStart: () => void;
     onResizeEnd: (result: Rect) => void;
   }
@@ -252,66 +176,77 @@ export namespace ResizeHandle {
   }
 }
 
+//#region sides
 export class LeftResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     const left = this.leftBound(dragPoint, e);
-    return { left };
+    return { left, top: -Infinity, bottom: Infinity };
   }
 
-  fitByHeight(bounds: Bounds): Bounds {
-    return this.fitVerticalCenter(bounds);
+  fitByHeight(bounds: Rect, dragPoint: DragPoint): Rect {
+    const { bottom, top } = this.calculateVerticalBounds(bounds, dragPoint);
+    const left = bounds.right - (bottom - top) * this.aspectRatio;
+    return bounds.withUpdate({ top, bottom, left });
   }
 
-  fitByWidth(bounds: Bounds): Bounds {
-    return this.fitVerticalCenter(bounds);
+  fitByWidth(bounds: Rect, dragPoint: DragPoint): Rect {
+    return this.fitByHeight(bounds, dragPoint);
   }
 }
 
 export class RightResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     const right = this.rightBound(dragPoint, e);
-    return { right };
+    return { right, top: -Infinity, bottom: Infinity };
   }
 
-  fitByHeight(bounds: Bounds): Bounds {
-    return this.fitVerticalCenter(bounds);
+  fitByHeight(bounds: Rect, dragPoint: DragPoint): Rect {
+    const { bottom, top } = this.calculateVerticalBounds(bounds, dragPoint);
+    const right = bounds.left + (bottom - top) * this.aspectRatio;
+    return bounds.withUpdate({ top, bottom, right });
   }
 
-  fitByWidth(bounds: Bounds): Bounds {
-    return this.fitVerticalCenter(bounds);
+  fitByWidth(bounds: Rect, dragPoint: DragPoint): Rect {
+    return this.fitByHeight(bounds, dragPoint);
   }
 }
 
 export class TopResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     const top = this.topBound(dragPoint, e);
-    return { top };
+    return { top, left: -Infinity, right: Infinity };
   }
 
-  fitByHeight(bounds: Bounds): Bounds {
-    return this.fitHorizontalCenter(bounds);
+  fitByHeight(bounds: Rect, dragPoint: DragPoint): Rect {
+    const { right, left } = this.calculateHorizontalBounds(bounds, dragPoint);
+    const top = bounds.bottom - (right - left) / this.aspectRatio;
+    return bounds.withUpdate({ top, left, right });
   }
 
-  fitByWidth(bounds: Bounds): Bounds {
-    return this.fitHorizontalCenter(bounds);
+  fitByWidth(bounds: Rect, dragPoint: DragPoint): Rect {
+    return this.fitByHeight(bounds, dragPoint);
   }
 }
 
 export class BottomResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     const bottom = this.bottomBound(dragPoint, e);
-    return { bottom };
+    return { bottom, left: -Infinity, right: Infinity };
   }
 
-  fitByHeight(bounds: Bounds): Bounds {
-    return this.fitHorizontalCenter(bounds);
+  fitByHeight(bounds: Rect, dragPoint: DragPoint): Rect {
+    const { right, left } = this.calculateHorizontalBounds(bounds, dragPoint);
+    const bottom = bounds.top + (right - left) / this.aspectRatio;
+    return bounds.withUpdate({ bottom, left, right });
   }
 
-  fitByWidth(bounds: Bounds): Bounds {
-    return this.fitHorizontalCenter(bounds);
+  fitByWidth(bounds: Rect, dragPoint: DragPoint): Rect {
+    return this.fitByHeight(bounds, dragPoint);
   }
 }
+//#endregion sides
 
+//#region corners
 export class TopLeftResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     return {
@@ -320,12 +255,20 @@ export class TopLeftResizeHandle extends ResizeHandle {
     };
   }
 
-  fitByWidth(bounds: Bounds): Bounds {
-    return this.fitTop(bounds);
+  fitByWidth(bounds: Rect): Rect {
+    const width = Math.max(bounds.right - bounds.left, this.params.minSize.width);
+    const height = Math.max(width / this.aspectRatio, this.params.minSize.height);
+    const left = bounds.right - height * this.aspectRatio;
+    const top = bounds.bottom - height;
+    return bounds.withUpdate({ left, top });
   }
 
-  fitByHeight(bounds: Bounds): Bounds {
-    return this.fitLeft(bounds);
+  fitByHeight(bounds: Rect): Rect {
+    const height = Math.max(bounds.bottom - bounds.top, this.params.minSize.height);
+    const width = Math.max(height * this.aspectRatio, this.params.minSize.width);
+    const left = bounds.right - width;
+    const top = bounds.bottom - width / this.aspectRatio;
+    return bounds.withUpdate({ left, top });
   }
 }
 
@@ -337,12 +280,20 @@ export class TopRightResizeHandle extends ResizeHandle {
     };
   }
 
-  fitByWidth(bounds: Bounds): Bounds {
-    return this.fitTop(bounds);
+  fitByWidth(bounds: Rect): Rect {
+    const width = Math.max(bounds.right - bounds.left, this.params.minSize.width);
+    const height = Math.max(width / this.aspectRatio, this.params.minSize.height);
+    const right = bounds.left + height * this.aspectRatio;
+    const top = bounds.bottom - height;
+    return bounds.withUpdate({ right, top });
   }
 
-  fitByHeight(bounds: Bounds): Bounds {
-    return this.fitRight(bounds);
+  fitByHeight(bounds: Rect): Rect {
+    const height = Math.max(bounds.bottom - bounds.top, this.params.minSize.height);
+    const width = Math.max(height * this.aspectRatio, this.params.minSize.width);
+    const right = bounds.left + width;
+    const top = bounds.bottom - width / this.aspectRatio;
+    return bounds.withUpdate({ right, top });
   }
 }
 
@@ -354,12 +305,20 @@ export class BottomRightResizeHandle extends ResizeHandle {
     };
   }
 
-  fitByWidth(bounds: Bounds): Bounds {
-    return this.fitBottom(bounds);
+  fitByWidth(bounds: Rect): Rect {
+    const width = Math.max(bounds.right - bounds.left, this.params.minSize.width);
+    const height = Math.max(width / this.aspectRatio, this.params.minSize.height);
+    const right = bounds.left + height * this.aspectRatio;
+    const bottom = bounds.top + height;
+    return bounds.withUpdate({ right, bottom });
   }
 
-  fitByHeight(bounds: Bounds): Bounds {
-    return this.fitRight(bounds);
+  fitByHeight(bounds: Rect): Rect {
+    const height = Math.max(bounds.bottom - bounds.top, this.params.minSize.height);
+    const width = Math.max(height * this.aspectRatio, this.params.minSize.width);
+    const right = bounds.left + width;
+    const bottom = bounds.top + width / this.aspectRatio;
+    return bounds.withUpdate({ right, bottom });
   }
 }
 
@@ -371,11 +330,20 @@ export class BottomLeftResizeHandle extends ResizeHandle {
     };
   }
 
-  fitByWidth(bounds: Bounds): Bounds {
-    return this.fitBottom(bounds);
+  fitByWidth(bounds: Rect): Rect {
+    const width = Math.max(bounds.right - bounds.left, this.params.minSize.width);
+    const height = Math.max(width / this.aspectRatio, this.params.minSize.height);
+    const left = bounds.right - height * this.aspectRatio;
+    const bottom = bounds.top + height;
+    return bounds.withUpdate({ left, bottom });
   }
 
-  fitByHeight(bounds: Bounds): Bounds {
-    return this.fitLeft(bounds);
+  fitByHeight(bounds: Rect): Rect {
+    const height = Math.max(bounds.bottom - bounds.top, this.params.minSize.height);
+    const width = Math.max(height * this.aspectRatio, this.params.minSize.width);
+    const left = bounds.right - width;
+    const bottom = bounds.top + width / this.aspectRatio;
+    return bounds.withUpdate({ left, bottom });
   }
 }
+//#endregion corners
