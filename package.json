@@ -6,7 +6,8 @@
   "scripts": {
     "start": "webpack-dev-server",
     "test": "exit 0",
-    "build": "tsc -p ."
+    "build": "tsc -p .",
+    "prepack": "npm run build"
   },
   "keywords": [
     "draggable",
