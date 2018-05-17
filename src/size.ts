@@ -51,49 +51,51 @@ export function px(value: number) {
   return Math.round(value) + 'px';
 }
 
+export function unpx(value: string | null) {
+  return value == null ? 0 : Number(value.replace(/px$/, ''));
+}
+
 export interface Point {
   x: number;
   y: number;
 }
 
-export interface IPlaceStrategy {
-  place(child: IPlaceStrategy.FitParams, container: Rect): Rect;
+export interface IBorders {
+  vertical: number;
+  horizontal: number;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
 }
 
-export namespace IPlaceStrategy {
-  export interface FitParams extends PlaceParams, SizeParams {
+export class Borders implements IBorders {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+  readonly bottom: number;
+
+  constructor(el: HTMLElement) {
+    const computedStyle = window.getComputedStyle(el);
+    if (computedStyle.boxSizing === 'border-box') {
+      this.left = 0;
+      this.right = 0;
+      this.top = 0;
+      this.bottom = 0;
+      return;
+    }
+
+    this.left = unpx(computedStyle.borderLeftWidth);
+    this.right = unpx(computedStyle.borderRightWidth);
+    this.top = unpx(computedStyle.borderTopWidth);
+    this.bottom = unpx(computedStyle.borderBottomWidth);
   }
-}
 
-export class SimplePlaceStrategy implements IPlaceStrategy {
-  place(child: IPlaceStrategy.FitParams, container: Rect): Rect {
-    const rect: IPlaceStrategy.FitParams = child;
+  get vertical () {
+    return this.left + this.right;
+  }
 
-    const hitLeft = rect.left <= container.left;
-    if (hitLeft) {
-      rect.left = container.left;
-    }
-
-    const hitRight = rect.left + rect.width >= container.right;
-    if (hitRight) {
-      rect.left = container.right - rect.width;
-    }
-
-    const hitTop = rect.top <= container.top;
-    if (hitTop) {
-      rect.top = container.top;
-    }
-
-    const hitBottom = rect.top + rect.height >= container.bottom;
-    if (hitBottom) {
-      rect.top = container.bottom - rect.height;
-    }
-
-    return new Rect({
-      left: rect.left,
-      top: rect.top,
-      right: rect.left + rect.width,
-      bottom: rect.top + rect.height,
-    });
+  get horizontal () {
+    return this.top + this.bottom;
   }
 }

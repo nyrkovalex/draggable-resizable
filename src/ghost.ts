@@ -1,26 +1,23 @@
 import {
   Rect,
   px,
-  IPlaceStrategy,
   SizeParams,
   PlaceParams,
+  IBorders,
 } from './size';
-import { Parametrized, BorderParams } from './util';
+import { Parametrized } from './util';
 
 export class Ghost extends Parametrized<Ghost.Params> {
   private readonly ghost: HTMLElement;
-  private readonly ghostWrapper: HTMLElement;
 
   constructor(params: Ghost.Params) {
     super(params);
     this.ghost = this.createGhost(params.proto);
-    this.ghostWrapper = this.createWrapper(params.container);
-    this.ghostWrapper.appendChild(this.ghost);
   }
 
   place(params: PlaceParams): this {
     const ghostRect = this.ghost.getBoundingClientRect();
-    const containerRect = new Rect(this.ghostWrapper.getBoundingClientRect());
+    const containerRect = new Rect(this.params.container.getBoundingClientRect());
 
     const targetRect = {
       top: params.top,
@@ -29,10 +26,41 @@ export class Ghost extends Parametrized<Ghost.Params> {
       height: ghostRect.height,
     };
 
-    const fittedRect = this.params.placeStrategy.place(targetRect, containerRect);
+    const fittedRect = this.calculatePlaceRect(targetRect, containerRect);
     this.setRect(fittedRect);
 
     return this;
+  }
+
+  private calculatePlaceRect (child: PlaceParams & SizeParams, container: Rect) {
+    const rect = child;
+
+    const hitLeft = rect.left <= container.left;
+    if (hitLeft) {
+      rect.left = container.left;
+    }
+
+    const hitRight = rect.left + rect.width >= container.right;
+    if (hitRight) {
+      rect.left = container.right - rect.width;
+    }
+
+    const hitTop = rect.top <= container.top;
+    if (hitTop) {
+      rect.top = container.top;
+    }
+
+    const hitBottom = rect.top + rect.height >= container.bottom;
+    if (hitBottom) {
+      rect.top = container.bottom - rect.height;
+    }
+
+    return new Rect({
+      left: rect.left,
+      top: rect.top,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+    });
   }
 
   setSize({ width, height }: SizeParams): this {
@@ -42,14 +70,14 @@ export class Ghost extends Parametrized<Ghost.Params> {
   }
 
   get el(): HTMLElement {
-    return this.ghostWrapper;
+    return this.ghost;
   }
 
   get relativeRect(): Rect {
     const rect = this.ghost.getBoundingClientRect();
-    const containerRect = this.ghostWrapper.getBoundingClientRect();
-    const left = rect.left - containerRect.left;
-    const top = rect.top - containerRect.top;
+    const containerRect = this.params.container.getBoundingClientRect();
+    const left = rect.left - containerRect.left - this.params.containerBorderSizes.left;
+    const top = rect.top - containerRect.top - this.params.containerBorderSizes.top;
     return new Rect({
       top,
       left,
@@ -59,23 +87,17 @@ export class Ghost extends Parametrized<Ghost.Params> {
   }
 
   get containerRect(): Rect {
-    return new Rect(this.ghostWrapper.getBoundingClientRect());
+    return new Rect(this.params.container.getBoundingClientRect());
   }
 
   setRect(rect: PlaceParams & SizeParams): this {
-    const containerRect = this.ghostWrapper.getBoundingClientRect();
-    this.ghost.style.left = px(rect.left - containerRect.left);
-    this.ghost.style.top = px(rect.top - containerRect.top);
+    const containerRect = this.params.container.getBoundingClientRect();
+    this.ghost.style.left = px(
+      rect.left - containerRect.left - this.params.containerBorderSizes.left);
+    this.ghost.style.top = px(
+      rect.top - containerRect.top - this.params.containerBorderSizes.top);
     this.setSize(rect);
     return this;
-  }
-
-  private createWrapper(container: HTMLElement): HTMLElement {
-    const wrapper = document.createElement('div');
-    wrapper.style.width = px(container.clientWidth);
-    wrapper.style.height = px(container.clientHeight);
-    wrapper.style.position = 'relative';
-    return wrapper;
   }
 
   private createGhost(proto: HTMLElement): HTMLElement {
@@ -90,7 +112,7 @@ export namespace Ghost {
   export interface Params {
     proto: HTMLElement;
     container: HTMLElement;
-    placeStrategy: IPlaceStrategy;
-    borderSizes: BorderParams;
+    borderSizes: IBorders;
+    containerBorderSizes: IBorders;
   }
 }

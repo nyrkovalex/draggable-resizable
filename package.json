@@ -17,6 +17,7 @@
   "author": "nyrkovalex@gmail.com",
   "license": "MIT",
   "devDependencies": {
+    "babel-polyfill": "^6.26.0",
     "ts-loader": "^4.2.0",
     "tslint": "^5.9.1",
     "tslint-config-airbnb": "^5.8.0",

@@ -10,7 +10,10 @@
   }
 
   #container {
-    border: 1px solid red;
+    border-top: 1rem solid red;
+    border-left: 2rem solid red;
+    border-bottom: 3rem solid red;
+    border-right: 4rem solid red;
     width: 800px;
     height: 600px;
     margin: auto;
@@ -198,12 +201,14 @@
     function createDraggable(elementId) {
       const draggable = document.getElementById(elementId);
       new dr.Draggable(draggable, {
-        container,
-        onDrag: () => {
+        container: container,
+        onDrag: function () {
           document.body.style.cursor = 'move';
           draggable.style.display = 'none';
         },
-        onDrop: ({ top, left }) => {
+        onDrop: function (params) {
+          const top = params.top;
+          const left = params.left;
           document.body.style.cursor = 'default';
           draggable.style.left = left + 'px';
           draggable.style.top = top + 'px';
@@ -212,7 +217,7 @@
       });
     }
 
-    function createResizable(elementId, params = {}) {
+    function createResizable(elementId, params) {
       const resizable = document.getElementById(elementId);
       const activeHandles = [
         'left',
@@ -226,32 +231,38 @@
       ];
       const handles = activeHandles
         .reduce(
-          (result, current) => ({
-            ...result,
-            [current]: resizable.querySelector(`.${current}-handle`)
-          }),
+          function (result, current) {
+            var update = {};
+            update[current] = resizable.querySelector('.' + current + '-handle');
+            return Object.assign({}, result, update);
+          },
           {}
         );
-      new dr.Resizable(resizable, {
-        container,
-        handles,
-        minSize: {
-          width: 20,
-          height: 20,
+      new dr.Resizable(resizable, Object.assign(
+        {
+          container: container,
+          handles: handles,
+          minSize: {
+            width: 20,
+            height: 20,
+          },
+          onResizeStart: function () {
+            resizable.style.display = 'none';
+          },
+          onResizeEnd: function (args) {
+            const left = args.left;
+            const top = args.top;
+            const width = args.width;
+            const height = args.height;
+            resizable.style.display = 'block';
+            resizable.style.left = left + 'px';
+            resizable.style.top = top + 'px';
+            resizable.style.width = width + 'px';
+            resizable.style.height = height + 'px';
+          },
         },
-        onResizeStart: () => {
-          resizable.style.display = 'none';
-        },
-        onResizeEnd: (args) => {
-          const { left, top, width, height } = args;
-          resizable.style.display = 'block';
-          resizable.style.left = left + 'px';
-          resizable.style.top = top + 'px';
-          resizable.style.width = width + 'px';
-          resizable.style.height = height + 'px';
-        },
-        ...params,
-      });
+        params || {}
+      ));
     }
   </script>
 </div>

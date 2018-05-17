@@ -12,9 +12,3 @@ export abstract class Parametrized<P> {
 
 export function noop() {
 }
-
-
-export interface BorderParams {
-  vertical: number;
-  horizontal: number;
-}

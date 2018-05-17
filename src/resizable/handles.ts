@@ -180,7 +180,9 @@ export namespace ResizeHandle {
 export class LeftResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     const left = this.leftBound(dragPoint, e);
-    return { left, top: -Infinity, bottom: Infinity };
+    return this.params.keepAspectRatio
+      ? { left, top: -Infinity, bottom: Infinity }
+      : { left };
   }
 
   fitByHeight(bounds: Rect, dragPoint: DragPoint): Rect {
@@ -197,7 +199,9 @@ export class LeftResizeHandle extends ResizeHandle {
 export class RightResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     const right = this.rightBound(dragPoint, e);
-    return { right, top: -Infinity, bottom: Infinity };
+    return this.params.keepAspectRatio
+      ? { right, top: -Infinity, bottom: Infinity }
+      : { right };
   }
 
   fitByHeight(bounds: Rect, dragPoint: DragPoint): Rect {
@@ -214,7 +218,9 @@ export class RightResizeHandle extends ResizeHandle {
 export class TopResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     const top = this.topBound(dragPoint, e);
-    return { top, left: -Infinity, right: Infinity };
+    return this.params.keepAspectRatio
+      ? { top, left: -Infinity, right: Infinity }
+      : { top };
   }
 
   fitByHeight(bounds: Rect, dragPoint: DragPoint): Rect {
@@ -231,7 +237,9 @@ export class TopResizeHandle extends ResizeHandle {
 export class BottomResizeHandle extends ResizeHandle {
   boundsUpdate(dragPoint: DragPoint, e: MouseEvent) {
     const bottom = this.bottomBound(dragPoint, e);
-    return { bottom, left: -Infinity, right: Infinity };
+    return this.params.keepAspectRatio
+      ? { bottom, left: -Infinity, right: Infinity }
+      : { bottom };
   }
 
   fitByHeight(bounds: Rect, dragPoint: DragPoint): Rect {
