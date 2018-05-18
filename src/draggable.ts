@@ -7,7 +7,7 @@ import { IDestructable, noop } from './util';
 import { Haunted } from './hanuted';
 
 export class Draggable extends Haunted<Draggable.Params> implements IDestructable {
-  private readonly ghost: Ghost;
+  private ghost?: Ghost;
   private readonly proto: HTMLElement;
   private dragPoint: Point | null = null;
 
@@ -19,7 +19,6 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
       ...params,
     });
     this.proto = proto;
-    this.ghost = this.createGhost(proto, this.params.container);
     this.proto.addEventListener('mousedown', this.startDrag);
   }
 
@@ -29,7 +28,7 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
   }
 
   private onMouseMove = (e: MouseEvent) => requestAnimationFrame(() => {
-    if (!this.dragPoint) {
+    if (!this.dragPoint || !this.ghost) {
       return;
     }
 
@@ -39,7 +38,7 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
   })
 
   private onMouseUp = () => {
-    if (!this.dragPoint) {
+    if (!this.dragPoint || !this.ghost) {
       return;
     }
     this.dragPoint = null;
@@ -51,6 +50,7 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
   }
 
   private startDrag = (e: MouseEvent) => {
+    this.ghost = this.createGhost(this.proto, this.params.container);
     this.params.container.appendChild(this.ghost.el);
     const targetRect = this.proto.getBoundingClientRect();
     this.dragPoint = {

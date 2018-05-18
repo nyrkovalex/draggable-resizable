@@ -1,15 +1,17 @@
 import { Point, Rect, Bounds, SizeParams } from '../size';
 import { Ghost } from '../ghost';
-import { Parametrized, IDestructable } from '../util';
+import { IDestructable } from '../util';
+import { Haunted } from '../hanuted';
 
 export interface DragPoint extends Point {
   protoRect: Rect;
 }
 
 export abstract class ResizeHandle extends
-  Parametrized<ResizeHandle.Params> implements IDestructable {
+  Haunted<ResizeHandle.Params> implements IDestructable {
   protected dragPoint: DragPoint | null = null;
   protected aspectRatio: number;
+  protected ghost?: Ghost;
 
   constructor(params: ResizeHandle.Params) {
     super(params);
@@ -27,11 +29,12 @@ export abstract class ResizeHandle extends
 
   private onResizeStart = (e: MouseEvent) => {
     e.stopPropagation();
-    this.params.container.appendChild(this.params.ghost.el);
+    this.ghost = this.createGhost(this.params.proto, this.params.container);
+    this.params.container.appendChild(this.ghost.el);
     const targetRect = this.params.proto.getBoundingClientRect();
     const { width, height } = targetRect;
-    this.params.ghost.setSize({ width, height });
-    this.params.ghost.place({
+    this.ghost.setSize({ width, height });
+    this.ghost.place({
       left: targetRect.left,
       top: targetRect.top,
     });
@@ -51,9 +54,9 @@ export abstract class ResizeHandle extends
 
   private onMouseUp = () => {
     this.dragPoint = null;
-    const rect = this.params.ghost.relativeRect;
+    const rect = this.ghost!.relativeRect;
     this.params.onResizeEnd(rect);
-    this.params.container.removeChild(this.params.ghost.el);
+    this.params.container.removeChild(this.ghost!.el);
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mouseup', this.onMouseUp);
   }
@@ -65,7 +68,7 @@ export abstract class ResizeHandle extends
     const bounds = this.boundsUpdate(this.dragPoint, e);
     const fixedBounds = this.fixBounds(this.dragPoint.protoRect.withUpdate(bounds));
     if (!this.params.keepAspectRatio) {
-      this.params.ghost.setRect(fixedBounds);
+      this.ghost!.setRect(fixedBounds);
       return;
     }
     const boundsAspectRatio = fixedBounds.width / fixedBounds.height;
@@ -73,7 +76,7 @@ export abstract class ResizeHandle extends
     const fittedBounds = fitByWidth
       ? this.fitByWidth(fixedBounds, this.dragPoint)
       : this.fitByHeight(fixedBounds, this.dragPoint);
-    this.params.ghost.setRect(fittedBounds);
+    this.ghost!.setRect(fittedBounds);
   })
 
   protected leftBound(dragPoint: DragPoint, e: MouseEvent) {
@@ -117,7 +120,7 @@ export abstract class ResizeHandle extends
   }
 
   protected fixBounds(requestedBounds: Rect): Rect {
-    const container = this.params.ghost.containerRect;
+    const container = this.ghost!.containerRect;
     return requestedBounds.withUpdate({
       left: Math.max(requestedBounds.left, container.left),
       bottom: Math.min(requestedBounds.bottom, container.bottom),
@@ -164,7 +167,6 @@ export namespace ResizeHandle {
     el: HTMLElement;
     container: HTMLElement;
     proto: HTMLElement;
-    ghost: Ghost;
     keepAspectRatio: boolean;
     minSize: SizeParams;
     onResizeStart: () => void;

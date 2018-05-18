@@ -1,17 +1,14 @@
-import { Ghost } from '../ghost';
 import * as handles from './handles';
-import { IDestructable, noop } from '../util';
+import { IDestructable, noop, Parametrized } from '../util';
 import { Rect, SizeParams, IBorders, Borders } from '../size';
-import { Haunted } from '../hanuted';
 
 type HandleFactory = { [key: string]: handles.ResizeHandle.Constructor } & {
   [K in keyof Resizable.Handles]: handles.ResizeHandle.Constructor
 };
 
-export class Resizable extends Haunted<Resizable.Params> implements IDestructable {
+export class Resizable extends Parametrized<Resizable.Params> implements IDestructable {
   private borderSize: IBorders;
   private readonly proto: HTMLElement;
-  private readonly ghost: Ghost;
   private readonly handles: handles.ResizeHandle[];
 
   private resizeHandlers: HandleFactory = {
@@ -39,7 +36,6 @@ export class Resizable extends Haunted<Resizable.Params> implements IDestructabl
       ...params,
     });
     this.proto = proto;
-    this.ghost = this.createGhost(proto, this.params.container);
     this.borderSize = new Borders(proto);
     this.handles = this.bindHandlers(this.params.handles);
   }
@@ -62,7 +58,6 @@ export class Resizable extends Haunted<Resizable.Params> implements IDestructabl
         return new MaybeHandleConstructor({
           el: handleEl,
           container: this.params.container,
-          ghost: this.ghost,
           proto: this.proto,
           onResizeEnd: this.params.onResizeEnd,
           keepAspectRatio: this.params.keepAspectRatio,
