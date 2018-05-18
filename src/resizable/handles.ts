@@ -28,9 +28,13 @@ export abstract class ResizeHandle extends
   }
 
   private onResizeStart = (e: MouseEvent) => {
+    const parent = this.params.proto.parentNode;
+    if (!parent) {
+      return;
+    }
     e.stopPropagation();
     this.ghost = this.createGhost(this.params.proto, this.params.container);
-    this.params.container.appendChild(this.ghost.el);
+    parent.insertBefore(this.ghost.el, this.params.proto);
     const targetRect = this.params.proto.getBoundingClientRect();
     const { width, height } = targetRect;
     this.ghost.setSize({ width, height });

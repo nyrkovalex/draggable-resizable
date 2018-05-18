@@ -50,8 +50,12 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
   }
 
   private startDrag = (e: MouseEvent) => {
+    const parent = this.proto.parentNode;
+    if (!parent) {
+      return;
+    }
     this.ghost = this.createGhost(this.proto, this.params.container);
-    this.params.container.appendChild(this.ghost.el);
+    parent.insertBefore(this.ghost.el, this.proto);
     const targetRect = this.proto.getBoundingClientRect();
     this.dragPoint = {
       x: e.clientX - targetRect.left,
