@@ -10,13 +10,12 @@ export interface DragPoint extends Point {
 export abstract class ResizeHandle extends
   Haunted<ResizeHandle.Params> implements IDestructable {
   protected dragPoint: DragPoint | null = null;
-  protected aspectRatio: number;
+  protected aspectRatio: number = 0;
   protected ghost?: Ghost;
 
   constructor(params: ResizeHandle.Params) {
     super(params);
     this.params.el.addEventListener('mousedown', this.onResizeStart);
-    this.aspectRatio = this.calculateAspectRatio();
   }
 
   private calculateAspectRatio() {
@@ -33,6 +32,7 @@ export abstract class ResizeHandle extends
       return;
     }
     e.stopPropagation();
+    this.aspectRatio = this.calculateAspectRatio();
     this.ghost = this.createGhost(this.params.proto, this.params.container);
     parent.insertBefore(this.ghost.el, this.params.proto);
     const targetRect = this.params.proto.getBoundingClientRect();
