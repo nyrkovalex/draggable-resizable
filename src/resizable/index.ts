@@ -22,6 +22,20 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
     bottomLeft: handles.BottomLeftResizeHandle,
   };
 
+  /**
+   * Resizable element can be resized inside bounds of its `params.container`.
+   * Actual `proto` element is never mutated except for `mousedown` listener being attached
+   * to start the resize action.
+   *
+   * Instead ghost (a deep clone) element is created
+   * and mounted right before `proto` in DOM tree and properly resized.
+   *
+   * It's a client responsibility to perform additional actions like hiding actual element
+   * `params.onMouseDown` and setting new coordinates `params.onResizeEnd`
+   *
+   * @param proto resizable element, prototype for resizable ghost
+   * @param params resizable options
+   */
   constructor(proto: HTMLElement, params: Partial<Resizable.Params> = {}) {
     super({
       container: document.body,
@@ -29,6 +43,8 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
       handles: {},
       onResizeStart: noop,
       onResizeEnd: noop,
+      onMouseDown: noop,
+      onMouseUp: noop,
       minSize: {
         height: 1,
         width: 1,
@@ -40,6 +56,12 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
     this.handles = this.bindHandlers(this.params.handles);
   }
 
+  /**
+   * Cleans up everything Resizable has placed in DOM.
+   * Resizable cannot be reused after destroy.
+   *
+   * Please be responsible. Recycle ♻️.
+   */
   destroy(): void {
     this.handles.forEach(h => h.destroy());
   }
@@ -59,13 +81,15 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
           el: handleEl,
           container: this.params.container,
           proto: this.proto,
-          onResizeEnd: this.params.onResizeEnd,
           keepAspectRatio: this.params.keepAspectRatio,
           minSize: {
             height: this.params.minSize.height + this.borderSize.vertical,
             width: this.params.minSize.width + this.borderSize.horizontal,
           },
+          onMouseDown: this.params.onMouseDown,
           onResizeStart: () => this.params.onResizeStart(key),
+          onResizeEnd: this.params.onResizeEnd,
+          onMouseUp: this.params.onMouseUp,
         });
       })
       .filter(Boolean) as handles.ResizeHandle[];
@@ -84,12 +108,50 @@ export namespace Resizable {
     'bottomLeft';
 
   export interface Params {
+    /**
+     * Minimal size target element can be resized to
+     */
     minSize: SizeParams;
+
+    /**
+     * Element which limits resizable growth. `<body>` by default.
+     */
     container: HTMLElement;
+
+    /**
+     * Whether to keep original aspect ratio or not.
+     */
     keepAspectRatio: boolean;
+
+    /**
+     * Drag handles — a hash of elements which serve as resize handle
+     * for each supported direction.
+     */
     handles: Partial<Handles>;
+
+    /**
+     * onResizeStart is called on first mouse movement while holding button down
+     *
+     * @param direction resize direction.
+     * Can take values 'left', 'topLeft', 'top', 'topRight', 'right',
+     * 'bottomRight', 'bottom', 'bottomLeft';
+     */
     onResizeStart: (direction: ResizeDirection) => void;
+
+    /**
+     * onResizeEnd is called when resize is completed, _even if element was not resized at all_.
+     */
     onResizeEnd: (result: Rect) => void;
+
+    /**
+     * onMouseDown is called every time mouse button is down on Resizable element.
+     */
+    onMouseDown: () => void;
+
+    /**
+     * onMouseUp is called when mouse button is up, _only if Resizable was **not** resized_.
+     */
+    onMouseUp: () => void;
   }
 
   export type Handles = {

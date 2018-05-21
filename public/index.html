@@ -200,13 +200,22 @@
 
     function createDraggable(elementId) {
       const draggable = document.getElementById(elementId);
+      draggable.onclick = function () { console.log('HERE') };
       new dr.Draggable(draggable, {
         container: container,
-        onDrag: function () {
+        onMouseDown: function () {
+          console.log('mousedown');
           document.body.style.cursor = 'move';
           draggable.style.display = 'none';
         },
-        onDrop: function (params) {
+        onMouseUp: function () {
+          console.log('mouseup');
+        },
+        onDragStart: function () {
+          console.log('drag start');
+        },
+        onDragEnd: function (params) {
+          console.log('drag end');
           const top = params.top;
           const left = params.left;
           document.body.style.cursor = 'default';
@@ -246,10 +255,18 @@
             width: 20,
             height: 20,
           },
-          onResizeStart: function () {
+          onMouseDown: function () {
+            console.log('mousedown');
             resizable.style.display = 'none';
           },
+          onMouseUp: function () {
+            console.log('mouseup');
+          },
+          onResizeStart: function () {
+            console.log('resize start');
+          },
           onResizeEnd: function (args) {
+            console.log('resize end');
             const left = args.left;
             const top = args.top;
             const width = args.width;

@@ -12,6 +12,7 @@ export abstract class ResizeHandle extends
   protected dragPoint: DragPoint | null = null;
   protected aspectRatio: number = 0;
   protected ghost?: Ghost;
+  private isResizing = false;
 
   constructor(params: ResizeHandle.Params) {
     super(params);
@@ -45,7 +46,7 @@ export abstract class ResizeHandle extends
     this.dragPoint = this.captureDragPoint(e, new Rect(targetRect));
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mouseup', this.onMouseUp);
-    this.params.onResizeStart();
+    this.params.onMouseDown();
   }
 
   private captureDragPoint(e: MouseEvent, protoRect: Rect) {
@@ -57,6 +58,10 @@ export abstract class ResizeHandle extends
   }
 
   private onMouseUp = () => {
+    if (!this.isResizing) {
+      this.params.onMouseUp();
+    }
+    this.isResizing = false;
     this.dragPoint = null;
     const rect = this.ghost!.relativeRect;
     this.params.onResizeEnd(rect);
@@ -68,6 +73,10 @@ export abstract class ResizeHandle extends
   private onMouseMove = (e: MouseEvent) => requestAnimationFrame(() => {
     if (!this.dragPoint) {
       return;
+    }
+    if (!this.isResizing) {
+      this.isResizing = true;
+      this.params.onResizeStart();
     }
     const bounds = this.boundsUpdate(this.dragPoint, e);
     const fixedBounds = this.fixBounds(this.dragPoint.protoRect.withUpdate(bounds));
@@ -175,6 +184,8 @@ export namespace ResizeHandle {
     minSize: SizeParams;
     onResizeStart: () => void;
     onResizeEnd: (result: Rect) => void;
+    onMouseDown: () => void;
+    onMouseUp: () => void;
   }
 
   export interface Constructor {

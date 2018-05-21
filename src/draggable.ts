@@ -10,18 +10,41 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
   private ghost?: Ghost;
   private readonly proto: HTMLElement;
   private dragPoint: Point | null = null;
+  private isDragging = false;
 
+  /**
+   * Draggable element can be dragged inside bounds of its `params.container`.
+   * Actual `proto` element is never mutated except for `mousedown` listener being attached
+   * to start drag.
+   *
+   * Instead ghost (or deep clone) element is created and mounted
+   * before `proto` in DOM tree and moved.
+   *
+   * It's a client responsibility to perform additional actions like hiding actual element
+   * `params.onMouseDown` and setting new coordinates `params.onDragEnd`
+   *
+   * @param proto draggable element, prototype for draggable ghost
+   * @param params draggable options
+   */
   constructor(proto: HTMLElement, params: Partial<Draggable.Params> = {}) {
     super({
       container: document.body,
-      onDrop: noop,
-      onDrag: noop,
+      onDragEnd: noop,
+      onDragStart: noop,
+      onMouseDown: noop,
+      onMouseUp: noop,
       ...params,
     });
     this.proto = proto;
     this.proto.addEventListener('mousedown', this.startDrag);
   }
 
+  /**
+   * Cleans up everything Draggable has placed in DOM.
+   * Draggable cannot be reused after destroy.
+   *
+   * Please be responsible. Recycle ♻️.
+   */
   destroy(): void {
     this.dragPoint = null;
     this.proto.removeEventListener('mousedown', this.startDrag);
@@ -30,6 +53,11 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
   private onMouseMove = (e: MouseEvent) => requestAnimationFrame(() => {
     if (!this.dragPoint || !this.ghost) {
       return;
+    }
+
+    if (!this.isDragging) {
+      this.isDragging = true;
+      this.params.onDragStart();
     }
 
     const left = e.clientX - this.dragPoint.x;
@@ -41,11 +69,16 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
     if (!this.dragPoint || !this.ghost) {
       return;
     }
+
+    if (!this.isDragging) {
+      this.params.onMouseUp();
+    }
+    this.isDragging = false;
     this.dragPoint = null;
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mouseup', this.onMouseUp);
     const rect = this.ghost.relativeRect;
-    this.params.onDrop(rect);
+    this.params.onDragEnd(rect);
     this.params.container.removeChild(this.ghost.el);
   }
 
@@ -70,15 +103,36 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
     });
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mouseup', this.onMouseUp);
-    this.params.onDrag();
+    this.params.onMouseDown();
   }
 }
 
 export namespace Draggable {
   export interface Params {
+    /**
+     * Element which limits draggable movement. `<body>` by default.
+     */
     container: HTMLElement;
-    onDrop: (point: Rect) => void;
-    onDrag: () => void;
+
+    /**
+     * onDragEnd is called when drag is completed, _even when Draggable was not moved_.
+     */
+    onDragEnd: (point: Rect) => void;
+
+    /**
+     * onDragStart is called on first draggable movement.
+     */
+    onDragStart: () => void;
+
+    /**
+     * onMouseDown is called every time mouse button is down on Draggable.
+     */
+    onMouseDown: () => void;
+
+    /**
+     * onMouseUp is called when mouse button is up _only if Draggable was **not** moved_.
+     */
+    onMouseUp: () => void;
   }
 }
 
