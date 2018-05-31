@@ -48,7 +48,7 @@ export class Rect implements Bounds {
 }
 
 export function px(value: number) {
-  return Math.round(value) + 'px';
+  return value + 'px';
 }
 
 export function unpx(value: string | null) {
