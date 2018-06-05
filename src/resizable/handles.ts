@@ -58,30 +58,29 @@ export abstract class ResizeHandle extends
   }
 
   private onMouseUp = () => {
+    if (!this.ghost) {
+      return;
+    }
     if (!this.isResizing) {
       this.params.onMouseUp();
     }
     this.isResizing = false;
     this.dragPoint = null;
-    const rect = this.ghost!.relativeRect;
-    this.params.onResizeEnd(rect);
+    const rect = this.ghost.relativeRect;
+    this.params.onResizeEnd({ rect, ghost: this.ghost.el });
     this.params.container.removeChild(this.ghost!.el);
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mouseup', this.onMouseUp);
   }
 
   private onMouseMove = (e: MouseEvent) => requestAnimationFrame(() => {
-    if (!this.dragPoint) {
+    if (!this.dragPoint || !this.ghost) {
       return;
-    }
-    if (!this.isResizing) {
-      this.isResizing = true;
-      this.params.onResizeStart();
     }
     const bounds = this.boundsUpdate(this.dragPoint, e);
     const fixedBounds = this.fixBounds(this.dragPoint.protoRect.withUpdate(bounds));
     if (!this.params.keepAspectRatio) {
-      this.ghost!.setRect(fixedBounds);
+      this.resizeGhost(fixedBounds);
       return;
     }
     const boundsAspectRatio = fixedBounds.width / fixedBounds.height;
@@ -89,8 +88,20 @@ export abstract class ResizeHandle extends
     const fittedBounds = fitByWidth
       ? this.fitByWidth(fixedBounds, this.dragPoint)
       : this.fitByHeight(fixedBounds, this.dragPoint);
-    this.ghost!.setRect(fittedBounds);
+    this.resizeGhost(fittedBounds);
   })
+
+  private resizeGhost (rect: Rect) {
+    if (!this.ghost) {
+      return;
+    }
+    this.ghost.setRect(rect);
+    if (!this.isResizing) {
+      this.isResizing = true;
+      this.params.onResizeStart({ rect: this.ghost.relativeRect, ghost: this.ghost.el });
+    }
+    this.params.onResize({ rect: this.ghost.relativeRect, ghost: this.ghost.el });
+  }
 
   protected leftBound(dragPoint: DragPoint, e: MouseEvent) {
     const xDiff = dragPoint.x - e.clientX;
@@ -182,10 +193,16 @@ export namespace ResizeHandle {
     proto: HTMLElement;
     keepAspectRatio: boolean;
     minSize: SizeParams;
-    onResizeStart: () => void;
-    onResizeEnd: (result: Rect) => void;
+    onResizeStart: (params: ResizeParams) => void;
+    onResizeEnd: (params: ResizeParams) => void;
     onMouseDown: () => void;
     onMouseUp: () => void;
+    onResize: (params: ResizeParams) => void;
+  }
+
+  export interface ResizeParams {
+    rect: Rect;
+    ghost: HTMLElement;
   }
 
   export interface Constructor {

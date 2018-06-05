@@ -30,6 +30,7 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
     super({
       container: document.body,
       onDragEnd: noop,
+      onDrag: noop,
       onDragStart: noop,
       onMouseDown: noop,
       onMouseUp: noop,
@@ -55,14 +56,15 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
       return;
     }
 
-    if (!this.isDragging) {
-      this.isDragging = true;
-      this.params.onDragStart();
-    }
-
     const left = e.clientX - this.dragPoint.x;
     const top = e.clientY - this.dragPoint.y;
     this.ghost.place({ left, top });
+
+    if (!this.isDragging) {
+      this.isDragging = true;
+      this.params.onDragStart({ rect: this.ghost.relativeRect, ghost: this.ghost.el });
+    }
+    this.params.onDrag({ rect: this.ghost.relativeRect, ghost: this.ghost.el });
   })
 
   private onMouseUp = () => {
@@ -78,7 +80,7 @@ export class Draggable extends Haunted<Draggable.Params> implements IDestructabl
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mouseup', this.onMouseUp);
     const rect = this.ghost.relativeRect;
-    this.params.onDragEnd(rect);
+    this.params.onDragEnd({ rect, ghost: this.ghost.el });
     this.params.container.removeChild(this.ghost.el);
   }
 
@@ -117,12 +119,17 @@ export namespace Draggable {
     /**
      * onDragEnd is called when drag is completed, _even when Draggable was not moved_.
      */
-    onDragEnd: (point: Rect) => void;
+    onDragEnd: (params: OnDragParams) => void;
+
+    /**
+     * onDrag is called when drag is in progress on every mouse move.
+     */
+    onDrag: (params: OnDragParams) => void;
 
     /**
      * onDragStart is called on first draggable movement.
      */
-    onDragStart: () => void;
+    onDragStart: (params: OnDragParams) => void;
 
     /**
      * onMouseDown is called every time mouse button is down on Draggable.
@@ -133,6 +140,11 @@ export namespace Draggable {
      * onMouseUp is called when mouse button is up _only if Draggable was **not** moved_.
      */
     onMouseUp: () => void;
+  }
+
+  export interface OnDragParams {
+    ghost: HTMLElement;
+    rect: Rect;
   }
 }
 

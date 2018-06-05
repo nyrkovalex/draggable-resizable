@@ -42,6 +42,7 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
       keepAspectRatio: false,
       handles: {},
       onResizeStart: noop,
+      onResize: noop,
       onResizeEnd: noop,
       onMouseDown: noop,
       onMouseUp: noop,
@@ -77,6 +78,7 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
         if (!handleEl) {
           return;
         }
+        const handlerFactory = this.resizeHandler(key);
         return new MaybeHandleConstructor({
           el: handleEl,
           container: this.params.container,
@@ -87,12 +89,21 @@ export class Resizable extends Parametrized<Resizable.Params> implements IDestru
             width: this.params.minSize.width + this.borderSize.horizontal,
           },
           onMouseDown: this.params.onMouseDown,
-          onResizeStart: () => this.params.onResizeStart(key),
-          onResizeEnd: this.params.onResizeEnd,
           onMouseUp: this.params.onMouseUp,
+          onResizeStart: handlerFactory(this.params.onResizeStart),
+          onResizeEnd: handlerFactory(this.params.onResizeEnd),
+          onResize: handlerFactory(this.params.onResize),
         });
       })
       .filter(Boolean) as handles.ResizeHandle[];
+  }
+
+  private resizeHandler (direction: Resizable.ResizeDirection) {
+    return (handler: (params: Resizable.OnResizeParams) => void) =>
+      (params: handles.ResizeHandle.ResizeParams) => handler({
+        direction,
+        ...params,
+      });
   }
 }
 
@@ -131,17 +142,13 @@ export namespace Resizable {
 
     /**
      * onResizeStart is called on first mouse movement while holding button down
-     *
-     * @param direction resize direction.
-     * Can take values 'left', 'topLeft', 'top', 'topRight', 'right',
-     * 'bottomRight', 'bottom', 'bottomLeft';
      */
-    onResizeStart: (direction: ResizeDirection) => void;
+    onResizeStart: (params: OnResizeParams) => void;
 
     /**
      * onResizeEnd is called when resize is completed, _even if element was not resized at all_.
      */
-    onResizeEnd: (result: Rect) => void;
+    onResizeEnd: (params: OnResizeParams) => void;
 
     /**
      * onMouseDown is called every time mouse button is down on Resizable element.
@@ -152,6 +159,22 @@ export namespace Resizable {
      * onMouseUp is called when mouse button is up, _only if Resizable was **not** resized_.
      */
     onMouseUp: () => void;
+
+    /**
+     * onResize is called on every mouse move during resize
+     */
+    onResize: (params: OnResizeParams) => void;
+  }
+
+  export interface OnResizeParams {
+    /*
+     * Resize direction.
+     * Can take values 'left', 'topLeft', 'top', 'topRight', 'right',
+     * 'bottomRight', 'bottom', 'bottomLeft';
+     */
+    direction: ResizeDirection;
+    ghost: HTMLElement;
+    rect: Rect;
   }
 
   export type Handles = {

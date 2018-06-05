@@ -211,13 +211,16 @@
         onMouseUp: function () {
           console.log('mouseup');
         },
-        onDragStart: function () {
-          console.log('drag start');
+        onDragStart: function (params) {
+          console.log('drag start', params);
+        },
+        onDrag: function (params) {
+          console.log('drag', params);
         },
         onDragEnd: function (params) {
-          console.log('drag end');
-          const top = params.top;
-          const left = params.left;
+          console.log('drag end', params);
+          const top = params.rect.top;
+          const left = params.rect.left;
           document.body.style.cursor = 'default';
           draggable.style.left = left + 'px';
           draggable.style.top = top + 'px';
@@ -262,15 +265,18 @@
           onMouseUp: function () {
             console.log('mouseup');
           },
-          onResizeStart: function () {
-            console.log('resize start');
+          onResizeStart: function (args) {
+            console.log('resize start', args);
+          },
+          onResize: function (args) {
+            console.log('resize', args);
           },
           onResizeEnd: function (args) {
-            console.log('resize end');
-            const left = args.left;
-            const top = args.top;
-            const width = args.width;
-            const height = args.height;
+            console.log('resize end', args);
+            const left = args.rect.left;
+            const top = args.rect.top;
+            const width = args.rect.width;
+            const height = args.rect.height;
             resizable.style.display = 'block';
             resizable.style.left = left + 'px';
             resizable.style.top = top + 'px';
