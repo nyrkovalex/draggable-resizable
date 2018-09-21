@@ -84,7 +84,7 @@ export abstract class ResizeHandle extends
       return;
     }
     const boundsAspectRatio = fixedBounds.width / fixedBounds.height;
-    const fitByWidth = boundsAspectRatio.toFixed(8) < this.aspectRatio.toFixed(8);
+    const fitByWidth = Number(boundsAspectRatio.toFixed(8)) < Number(this.aspectRatio.toFixed(8));
     const fittedBounds = fitByWidth
       ? this.fitByWidth(fixedBounds, this.dragPoint)
       : this.fitByHeight(fixedBounds, this.dragPoint);
